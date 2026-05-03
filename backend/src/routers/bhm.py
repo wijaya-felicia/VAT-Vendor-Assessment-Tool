@@ -1,7 +1,3 @@
-"""
-API router for BHM (Bayesian Hierarchical Model) endpoints.
-Provides vendor rankings based on Bayesian inference.
-"""
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -20,17 +16,7 @@ async def get_vendor_rankings(
     storage_manager = Depends(get_storage_manager_cached),
     db: Session = Depends(get_db),
 ):
-    """
-    Get vendor rankings from Bayesian Hierarchical Model.
-    
-    Fits 3-level hierarchical models for price accuracy and timeliness.
-    Uses MCMC inference to estimate vendor-level effects with credible intervals.
-    
-    Query Parameters:
-    - session_id: The session ID from upload
-    
-    Returns: Ranked vendors with scores, credible intervals, and convergence status.
-    """
+
     try:
         # Retrieve merged data
         df = storage_manager.retrieve_data(session_id)
@@ -41,18 +27,12 @@ async def get_vendor_rankings(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        # Fit BHM models
         rankings_response = bhm_service.fit_and_rank(df)
-
-        # Update session_id in response
         rankings_response.session_id = session_id
 
-        # Check if convergence failed
-        if rankings_response.convergence_status == "not_converged":
-            return rankings_response  # Return with 200, but include warnings
 
-        # Optionally save results to database (for persistent mode)
-        # This would save BHMResult and VendorRanking records
+        if rankings_response.convergence_status == "not_converged":
+            return rankings_response 
 
         return rankings_response
 
@@ -75,17 +55,7 @@ async def get_vendor_detail(
     bhm_service = Depends(get_bhm_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get detailed BHM results for a single vendor.
-    
-    Includes posterior samples, diagnostics, and credible intervals.
-    
-    Query Parameters:
-    - session_id: The session ID from upload
-    - vendor_name: Name of vendor to retrieve details for
-    
-    Returns: Detailed scores, posterior samples, and convergence diagnostics.
-    """
+
     try:
         # Retrieve merged data
         df = storage_manager.retrieve_data(session_id)
@@ -96,10 +66,8 @@ async def get_vendor_detail(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        # Fit models
         rankings_response = bhm_service.fit_and_rank(df)
 
-        # Find vendor in rankings
         vendor_score = None
         for score in rankings_response.rankings:
             if score.vendor_name == vendor_name:
@@ -112,10 +80,8 @@ async def get_vendor_detail(
                 detail=f"Vendor '{vendor_name}' not found"
             )
 
-        # Get diagnostics
         diagnostics = bhm_service.get_diagnostics()
 
-        # Determine confidence level
         vendor_df = df[df["vendor_name"] == vendor_name]
         transaction_count = len(vendor_df)
         confidence = "high" if transaction_count >= 10 else ("medium" if transaction_count >= 5 else "low")
@@ -154,35 +120,23 @@ async def lock_model_as_prior(
     bhm_service = Depends(get_bhm_service),
     db: Session = Depends(get_db),
 ):
-    """
-    Lock current model posteriors as prior for next year's audit.
-    
-    Enables posterior-as-prior workflow for yearly auditing.
-    Saves model checkpoint to database for future use.
-    
-    Request body:
-    - model_year: e.g., "2025" or "2026"
-    - description: Optional audit notes
-    
-    Returns: Confirmation with vendor count and timestamp.
-    """
+
     try:
-        # Save posterior checkpoint
         checkpoint_data = bhm_service.save_posterior_checkpoint(request.model_year)
 
-        # Create database record
+        vendor_count = len(checkpoint_data["price_posteriors"])
+
         checkpoint = ModelCheckpoint(
             model_version=request.model_year,
             model_year=int(request.model_year),
             price_accuracy_posteriors=checkpoint_data["price_posteriors"],
             timeliness_posteriors=checkpoint_data["timeliness_posteriors"],
+            vendor_count=vendor_count,
             description=request.description or f"Audit year {request.model_year}",
             is_locked=True,
         )
         db.add(checkpoint)
         db.commit()
-
-        vendor_count = len(checkpoint_data["price_posteriors"])
 
         return ModelLockResponse(
             status="locked",

@@ -17,7 +17,6 @@ class UploadService:
             "total_price"
         }
 
-        # po_number is now expected in OC (will fall back if missing)
         self.OC_REQUIRED = {
             "po_number",
             "date",

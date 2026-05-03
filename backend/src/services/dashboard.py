@@ -1,6 +1,3 @@
-"""
-Dashboard service for computing descriptive statistics and aggregated metrics.
-"""
 from typing import List, Dict, Any, Optional
 import pandas as pd
 import numpy as np
@@ -9,18 +6,12 @@ from src.types.models import DashboardMetrics, VendorStats
 
 
 class DashboardService:
-    """
-    Computes descriptive statistics and aggregated metrics for dashboard visualization.
-    """
 
     def __init__(self):
         pass
 
     def compute_total_spending(self, df: pd.DataFrame) -> float:
-        """
-        Compute total spending from PO data.
-        Looks for: total_price_po, total_price, or po_total_price
-        """
+
         if "total_price_po" in df.columns:
             return float(df["total_price_po"].sum())
         elif "total_price" in df.columns:
@@ -30,15 +21,13 @@ class DashboardService:
         return 0.0
 
     def compute_average_transaction_value(self, df: pd.DataFrame) -> float:
-        """Average value per transaction."""
+
         total_spending = self.compute_total_spending(df)
         transaction_count = len(df)
         return total_spending / transaction_count if transaction_count > 0 else 0.0
 
     def compute_price_accuracy_stats(self, df: pd.DataFrame) -> Dict[str, float]:
-        """
-        Compute statistics for price_discrepancy metric.
-        """
+
         if "price_discrepancy" not in df.columns:
             return {
                 "mean": 0.0,
@@ -57,10 +46,7 @@ class DashboardService:
         }
 
     def compute_timeliness_stats(self, df: pd.DataFrame) -> Dict[str, float]:
-        """
-        Compute statistics for delay metric (in days).
-        Looks for: delay_days or delay
-        """
+
         delay_col = None
         if "delay_days" in df.columns:
             delay_col = "delay_days"
@@ -85,24 +71,19 @@ class DashboardService:
         }
 
     def compute_per_vendor_stats(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Compute aggregated statistics grouped by vendor.
-        Assumes column name: vendor_name
-        """
+
         vendor_stats = []
 
         if "vendor_name" not in df.columns:
             return vendor_stats
 
         for vendor_name, vendor_df in df.groupby("vendor_name"):
-            # Transaction count
+
             transaction_count = len(vendor_df)
 
-            # Spending
             total_spending = self.compute_total_spending(vendor_df)
             average_spending = total_spending / transaction_count if transaction_count > 0 else 0.0
 
-            # Price discrepancy
             if "price_discrepancy" in vendor_df.columns:
                 discrepancies = vendor_df["price_discrepancy"].dropna()
                 price_discrepancy_mean = float(discrepancies.mean()) if len(discrepancies) > 0 else 0.0
@@ -111,7 +92,6 @@ class DashboardService:
                 price_discrepancy_mean = 0.0
                 price_discrepancy_std = 0.0
 
-            # Delay
             delay_col = None
             if "delay_days" in vendor_df.columns:
                 delay_col = "delay_days"
@@ -140,31 +120,23 @@ class DashboardService:
         return vendor_stats
 
     def get_aggregated_metrics(self, df: pd.DataFrame, session_id: str) -> DashboardMetrics:
-        """
-        Compute all aggregated metrics and return as DashboardMetrics schema.
-        """
-        # Global statistics
+
         total_spending = self.compute_total_spending(df)
         transaction_count = len(df)
         average_transaction_value = self.compute_average_transaction_value(df)
         vendor_count = df["vendor_name"].nunique() if "vendor_name" in df.columns else 0
 
-        # Price accuracy
         price_acc_stats = self.compute_price_accuracy_stats(df)
 
-        # Timeliness
         delay_stats = self.compute_timeliness_stats(df)
 
-        # Per-vendor stats
         per_vendor = self.compute_per_vendor_stats(df)
 
-        # Convert to VendorStats objects
         vendor_stats_list = [
             VendorStats(**stats)
             for stats in per_vendor
         ]
 
-        # Create response
         return DashboardMetrics(
             session_id=session_id,
             total_transactions=transaction_count,
@@ -179,9 +151,7 @@ class DashboardService:
         )
 
     def get_vendor_comparison_data(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Prepare data for vendor comparison visualization (e.g., bar charts).
-        """
+
         per_vendor = self.compute_per_vendor_stats(df)
 
         return [
@@ -195,9 +165,7 @@ class DashboardService:
         ]
 
     def get_price_trend_data(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Prepare price discrepancy data by vendor for trend visualization.
-        """
+
         if "price_discrepancy" not in df.columns or "vendor_name" not in df.columns:
             return []
 
@@ -218,11 +186,7 @@ class DashboardService:
         return trend_data
 
     def get_delay_distribution(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Prepare delay distribution data for histogram visualization.
-        Buckets delays into day ranges.
-        """
-        # Look for delay_days or delay column
+
         delay_col = None
         if "delay_days" in df.columns:
             delay_col = "delay_days"
@@ -232,7 +196,6 @@ class DashboardService:
         if delay_col is None or "vendor_name" not in df.columns:
             return []
 
-        # Define bins for delay distribution (e.g., 0-5 days, 5-10 days, etc.)
         bins = [-float('inf'), 0, 5, 10, 15, 20, 30, float('inf')]
         labels = ["Early", "0-5 days", "5-10 days", "10-15 days", "15-20 days", "20-30 days", "30+ days"]
 
@@ -256,31 +219,24 @@ class DashboardService:
         return distribution
 
     def get_vendor_performance_matrix(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """
-        Create a performance matrix showing each vendor's metrics.
-        Useful for heatmap visualization.
-        """
+
         per_vendor = self.compute_per_vendor_stats(df)
         price_acc_stats = self.compute_price_accuracy_stats(df)
         delay_stats = self.compute_timeliness_stats(df)
 
-        # Normalize scores for heatmap (0-100 scale)
         matrix = []
 
         for vendor_stats in per_vendor:
-            # Price accuracy score: lower discrepancy is better
             price_score = 100 - min(
                 100,
                 (abs(vendor_stats["price_discrepancy_mean"]) / max(1, abs(price_acc_stats["max"]))) * 100
             )
 
-            # Timeliness score: lower delay is better
             timeliness_score = 100 - min(
                 100,
                 (vendor_stats["delay_mean"] / max(1, delay_stats["max"])) * 100
             )
 
-            # Combined score (simple average)
             combined_score = (price_score + timeliness_score) / 2
 
             matrix.append({
@@ -291,7 +247,6 @@ class DashboardService:
                 "transaction_count": vendor_stats["transaction_count"],
             })
 
-        # Sort by combined score descending
         matrix.sort(key=lambda x: x["combined_score"], reverse=True)
 
         return matrix

@@ -1,6 +1,3 @@
-"""
-Authentication dependency functions for FastAPI.
-"""
 from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from src.database.connection import get_db
@@ -10,30 +7,18 @@ from typing import Optional
 
 
 async def get_current_user(
-    authorization: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db),
 ) -> User:
-    """
-    Get the current authenticated user from JWT token in Authorization header.
-    
-    Args:
-        authorization: Authorization header value (Bearer <token>)
-        db: Database session
-        
-    Returns:
-        User object if token is valid
-        
-    Raises:
-        HTTPException: If token is invalid or missing
-    """
+
+    print(authorization)
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authorization header",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Extract token from "Bearer <token>"
+
     try:
         scheme, token = authorization.split()
         if scheme.lower() != "bearer":
@@ -61,16 +46,7 @@ async def get_optional_user(
     db: Session = Depends(get_db),
     authorization: Optional[str] = Header(None),
 ) -> Optional[User]:
-    """
-    Get the current user if authenticated, otherwise None (for guest mode).
-    
-    Args:
-        db: Database session
-        authorization: Authorization header value (optional)
-        
-    Returns:
-        User object if token is valid, None for guest access
-    """
+
     if not authorization:
         return None
     
@@ -86,19 +62,10 @@ async def get_optional_user(
 
 
 async def get_optional_user_from_header(
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db),
 ) -> Optional[User]:
-    """
-    Extract user from Authorization header if present.
-    
-    Args:
-        authorization: Authorization header value
-        db: Database session
-        
-    Returns:
-        User object if valid token provided, None otherwise
-    """
+
     if not authorization:
         return None
     

@@ -1,4 +1,3 @@
-"""Database connection and models."""
 from src.database.connection import Base, engine, SessionLocal, get_db, init_db
 from src.database.models import (
     UploadRecord,

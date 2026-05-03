@@ -1,7 +1,3 @@
-"""
-API router for dashboard endpoints.
-Provides descriptive statistics and aggregated metrics.
-"""
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -18,14 +14,7 @@ async def get_dashboard_metrics(
     dashboard_service = Depends(get_dashboard_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get aggregated dashboard metrics for a session.
-    
-    Query Parameters:
-    - session_id: The session ID from upload
-    
-    Returns: Aggregated metrics including total spending, averages, and per-vendor stats.
-    """
+
     try:
         # Retrieve merged data from storage
         df = storage_manager.retrieve_data(session_id)
@@ -36,7 +25,6 @@ async def get_dashboard_metrics(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        # Compute metrics
         metrics = dashboard_service.get_aggregated_metrics(df, session_id)
         return metrics
 
@@ -53,11 +41,7 @@ async def get_vendor_breakdown(
     dashboard_service = Depends(get_dashboard_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get per-vendor breakdown with statistics.
-    
-    Returns: List of vendors with transaction counts, spending, and key metrics.
-    """
+
     try:
         df = storage_manager.retrieve_data(session_id)
 
@@ -83,11 +67,7 @@ async def get_price_trends(
     dashboard_service = Depends(get_dashboard_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get price discrepancy trends by vendor.
-    
-    Returns: Min, max, and average price discrepancy for each vendor.
-    """
+
     try:
         df = storage_manager.retrieve_data(session_id)
 
@@ -118,11 +98,7 @@ async def get_delay_distribution(
     dashboard_service = Depends(get_dashboard_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get delay distribution by vendor and time ranges.
-    
-    Returns: Histogram data showing count of shipments in each delay range.
-    """
+
     try:
         df = storage_manager.retrieve_data(session_id)
 
@@ -153,11 +129,7 @@ async def get_performance_matrix(
     dashboard_service = Depends(get_dashboard_service),
     storage_manager = Depends(get_storage_manager_cached),
 ):
-    """
-    Get vendor performance matrix (heatmap data).
-    
-    Returns: Scores for price accuracy, timeliness, and combined performance.
-    """
+
     try:
         df = storage_manager.retrieve_data(session_id)
 
