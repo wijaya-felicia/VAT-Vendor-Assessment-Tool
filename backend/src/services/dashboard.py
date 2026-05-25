@@ -87,7 +87,8 @@ class DashboardService:
             if "price_discrepancy" in vendor_df.columns:
                 discrepancies = vendor_df["price_discrepancy"].dropna()
                 price_discrepancy_mean = float(discrepancies.mean()) if len(discrepancies) > 0 else 0.0
-                price_discrepancy_std = float(discrepancies.std()) if len(discrepancies) > 0 else 0.0
+                # std requires at least 2 values; return 0 for single value
+                price_discrepancy_std = float(discrepancies.std()) if len(discrepancies) > 1 else 0.0
             else:
                 price_discrepancy_mean = 0.0
                 price_discrepancy_std = 0.0
@@ -101,7 +102,8 @@ class DashboardService:
             if delay_col is not None:
                 delays = vendor_df[delay_col].dropna()
                 delay_mean = float(delays.mean()) if len(delays) > 0 else 0.0
-                delay_std = float(delays.std()) if len(delays) > 0 else 0.0
+                # std requires at least 2 values; return 0 for single value
+                delay_std = float(delays.std()) if len(delays) > 1 else 0.0
             else:
                 delay_mean = 0.0
                 delay_std = 0.0

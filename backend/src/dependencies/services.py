@@ -19,7 +19,11 @@ def get_dashboard_service() -> DashboardService:
 @lru_cache
 def get_bhm_service() -> BHMService:
     try:
-        return BHMService()
+        return BHMService(
+            mcmc_iterations=5000,  # Increased from 2000 for better convergence
+            mcmc_chains=4,
+            mcmc_tuning=2000,      # Increased from 1000 for better chain mixing
+        )
     except ImportError as e:
         raise ImportError(f"BHM service requires PyMC: {e}")
 

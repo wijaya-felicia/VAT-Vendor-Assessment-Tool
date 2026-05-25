@@ -9,6 +9,16 @@ class DataPipeline:
     4. Result + Ship (tracking) on: po_number, vendor_name
     """
     
+    def _is_valid_vendor(self, value):
+        """Check if value is a valid vendor name (starts with numeric vendor ID)"""
+        if pd.isna(value):
+            return False
+        vendor_str = str(value).strip()
+        # Valid vendor names start with numeric vendor ID (e.g., "3000004954 KAESER...")
+        if len(vendor_str) > 0:
+            return vendor_str[0].isdigit()
+        return False
+    
     def _is_valid_po_number(self, value):
         """Check if value is a valid PO number (numeric string)"""
         if pd.isna(value):
@@ -35,23 +45,47 @@ class DataPipeline:
         ship_clean = ship.copy()
         ship_clean['po_number'] = ship_clean['po_number'].ffill()
         
+        # Forward-fill vendor_name for multi-line orders (vendor appears only in first row of each PO)
+        po_clean['vendor_name'] = po_clean['vendor_name'].ffill()
+        ship_clean['vendor_name'] = ship_clean['vendor_name'].ffill()
+        
+        # Forward-fill vendor_id if it exists
+        if 'vendor_id' in po_clean.columns:
+            po_clean['vendor_id'] = po_clean['vendor_id'].ffill()
+        if 'vendor_id' in ship_clean.columns:
+            ship_clean['vendor_id'] = ship_clean['vendor_id'].ffill()
+        
         # Filter to keep only valid (numeric) po_numbers
         # This removes metadata rows like 'JKT/AIR', 'AIR', etc.
         po_clean = po_clean[po_clean['po_number'].apply(self._is_valid_po_number)]
         oc_clean = oc_clean[oc_clean['po_number'].apply(self._is_valid_po_number)]
         ship_clean = ship_clean[ship_clean['po_number'].apply(self._is_valid_po_number)]
         
-        print(f"Data after fill-forward and validation: PO={len(po_clean)}, OC={len(oc_clean)}, Ship={len(ship_clean)}")
+        # Filter to keep only valid vendor names (must start with numeric vendor ID)
+        # This removes metadata entries like 'COMPLETE DELIVERY', 'SPECIAL PRICE', etc.
+        po_clean = po_clean[po_clean['vendor_name'].apply(self._is_valid_vendor)]
+        ship_clean = ship_clean[ship_clean['vendor_name'].apply(self._is_valid_vendor)]
+        
+        print(f"After PO number validation: PO={len(po_clean)}, OC={len(oc_clean)}, Ship={len(ship_clean)}")
+        
+        # Get vendors before merge
+        po_vendors = po_clean['vendor_name'].unique()
+        print(f"Vendors in PO data: {len(po_vendors)} - {po_vendors.tolist()}")
         
         # Merge PO and OC on po_number and product_code
+        # Using LEFT join to preserve all PO rows even if no OC match
         merged = po_clean.merge(
             oc_clean,
             on=['po_number', 'product_code'],
-            how='inner',
+            how='left',
             suffixes=('_po', '_oc')
         )
         
-        print(f"After PO-OC merge: {len(merged)} rows")
+        print(f"After PO-OC merge (LEFT): {len(merged)} rows")
+        
+        # Get vendors after PO-OC merge
+        merged_vendors = merged['vendor_name'].unique()
+        print(f"Vendors after PO-OC merge: {len(merged_vendors)} - {merged_vendors.tolist()}")
         
         # Merge with Ship on po_number and vendor_name
         merged = merged.merge(
@@ -61,7 +95,10 @@ class DataPipeline:
             suffixes=('', '_ship')
         )
         
-        print(f"After Ship merge: {len(merged)} rows")
+        print(f"After Ship merge (LEFT): {len(merged)} rows")
+        
+        final_vendors = merged['vendor_name'].unique()
+        print(f"Final vendors in merged data: {len(final_vendors)} - {final_vendors.tolist()}")
         
         return merged
 
