@@ -59,13 +59,16 @@ async def upload_files(
             metrics={},
         )
 
+        data_sample = merged_df.iloc[0].to_dict() if len(merged_df) > 0 else {}
+        data_sample = {k: (None if pd.isna(v) else v) for k, v in data_sample.items()} if data_sample else {}
+
         return UploadResponse(
             session_id=session_id,
             status=200,
             message="Upload successful",
             row_count=len(merged_df),
             columns=merged_df.columns.tolist(),
-            data_sample=merged_df.iloc[0].to_dict() if len(merged_df) > 0 else {}
+            data_sample=data_sample
         )
         
     except Exception as e:

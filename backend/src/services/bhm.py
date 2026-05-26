@@ -35,9 +35,9 @@ class BHMService:
 
     def __init__(
         self, 
-        mcmc_iterations: int = 2000, 
-        mcmc_chains: int = 4, 
-        mcmc_tuning: int = 1000
+        mcmc_iterations: int = 8000, 
+        mcmc_chains: int = 8, 
+        mcmc_tuning: int = 2000
     ):
         """Initialize BHM service with MCMC configuration."""
         if pm is None:
@@ -286,6 +286,8 @@ class BHMService:
                         return_inferencedata=True,
                         progressbar=False,
                         random_seed=42,
+                        init="advi+adapt_diag",
+                        target_accept=0.95,
                     )
 
             self.price_model = model
@@ -386,6 +388,8 @@ class BHMService:
                         return_inferencedata=True,
                         progressbar=False,
                         random_seed=42,
+                        init="advi+adapt_diag",
+                        target_accept=0.95,
                     )
 
             self.timeliness_model = model

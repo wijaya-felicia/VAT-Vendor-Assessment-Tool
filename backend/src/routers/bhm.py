@@ -27,7 +27,20 @@ async def get_vendor_rankings(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        rankings_response = bhm_service.fit_and_rank(df)
+        # Auto-retrieve latest locked checkpoint (if user is logged in and has one)
+        prior_checkpoint = None
+        latest_checkpoint = db.query(ModelCheckpoint)\
+            .filter_by(is_locked=True)\
+            .order_by(ModelCheckpoint.model_year.desc())\
+            .first()
+        
+        if latest_checkpoint:
+            prior_checkpoint = {
+                "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
+                "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
+            }
+
+        rankings_response = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
         rankings_response.session_id = session_id
 
 
@@ -54,6 +67,7 @@ async def get_vendor_detail(
     vendor_name: str,
     bhm_service = Depends(get_bhm_service),
     storage_manager = Depends(get_storage_manager_cached),
+    db: Session = Depends(get_db),
 ):
 
     try:
@@ -66,7 +80,20 @@ async def get_vendor_detail(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        rankings_response = bhm_service.fit_and_rank(df)
+        # Auto-retrieve latest locked checkpoint (if user is logged in and has one)
+        prior_checkpoint = None
+        latest_checkpoint = db.query(ModelCheckpoint)\
+            .filter_by(is_locked=True)\
+            .order_by(ModelCheckpoint.model_year.desc())\
+            .first()
+        
+        if latest_checkpoint:
+            prior_checkpoint = {
+                "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
+                "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
+            }
+
+        rankings_response = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
 
         vendor_score = None
         for score in rankings_response.rankings:
@@ -126,17 +153,31 @@ async def lock_model_as_prior(
 
         vendor_count = len(checkpoint_data["price_posteriors"])
 
-        checkpoint = ModelCheckpoint(
-            model_version=request.model_year,
-            model_year=int(request.model_year),
-            price_accuracy_posteriors=checkpoint_data["price_posteriors"],
-            timeliness_posteriors=checkpoint_data["timeliness_posteriors"],
-            vendor_count=vendor_count,
-            description=request.description or f"Audit year {request.model_year}",
-            is_locked=True,
-        )
-        db.add(checkpoint)
-        db.commit()
+        # Check if checkpoint for this year already exists
+        existing_checkpoint = db.query(ModelCheckpoint).filter_by(model_year=int(request.model_year)).first()
+        
+        if existing_checkpoint:
+            # Update existing checkpoint
+            existing_checkpoint.model_version = request.model_year
+            existing_checkpoint.price_accuracy_posteriors = checkpoint_data["price_posteriors"]
+            existing_checkpoint.timeliness_posteriors = checkpoint_data["timeliness_posteriors"]
+            existing_checkpoint.vendor_count = vendor_count
+            existing_checkpoint.description = request.description or f"Audit year {request.model_year}"
+            existing_checkpoint.is_locked = True
+            db.commit()
+        else:
+            # Create new checkpoint
+            checkpoint = ModelCheckpoint(
+                model_version=request.model_year,
+                model_year=int(request.model_year),
+                price_accuracy_posteriors=checkpoint_data["price_posteriors"],
+                timeliness_posteriors=checkpoint_data["timeliness_posteriors"],
+                vendor_count=vendor_count,
+                description=request.description or f"Audit year {request.model_year}",
+                is_locked=True,
+            )
+            db.add(checkpoint)
+            db.commit()
 
         return ModelLockResponse(
             status="locked",
