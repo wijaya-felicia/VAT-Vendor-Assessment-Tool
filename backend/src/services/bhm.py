@@ -515,72 +515,88 @@ class BHMService:
 
     def compute_vendor_scores(self, df: pd.DataFrame) -> List[VendorBHMScore]:
         """Compute vendor scores from posterior distributions."""
-        if self.price_idata is None or self.timeliness_idata is None:
-            return []
+        import traceback
+        print("[COMPUTE_SCORES] Starting", flush=True)
+        try:
+            if self.price_idata is None or self.timeliness_idata is None:
+                print("[COMPUTE_SCORES] ERROR: Missing idata", flush=True)
+                return []
 
-        # Clean data to match what was used in model fitting
-        # Only drop NaNs in vendor_name and metric columns (preserve missing product codes)
-        delay_col = "delay_days" if "delay_days" in df.columns else "delay"
-        df_clean = df.dropna(subset=["vendor_name", "price_discrepancy", delay_col])
-        
-        vendor_names = df_clean["vendor_name"].unique()
-        vendor_scores = []
-        price_posterior = self.price_idata.posterior["vendor_effects"].values.flatten()
-        timeliness_posterior = self.timeliness_idata.posterior["vendor_effects"].values.flatten()
-        
-        # Back-transform posteriors from standardized scale to original scale
-        price_posterior = price_posterior * self.price_data_std
-        timeliness_posterior = timeliness_posterior * self.timeliness_data_std
+            # Clean data to match what was used in model fitting
+            # Only drop NaNs in vendor_name and metric columns (preserve missing product codes)
+            delay_col = "delay_days" if "delay_days" in df.columns else "delay"
+            df_clean = df.dropna(subset=["vendor_name", "price_discrepancy", delay_col])
+            
+            vendor_names = df_clean["vendor_name"].unique()
+            print(f"[COMPUTE_SCORES] Found {len(vendor_names)} vendors", flush=True)
+            
+            vendor_scores = []
+            price_posterior = self.price_idata.posterior["vendor_effects"].values.flatten()
+            timeliness_posterior = self.timeliness_idata.posterior["vendor_effects"].values.flatten()
+            
+            print(f"[COMPUTE_SCORES] Price posterior shape: {price_posterior.shape}", flush=True)
+            print(f"[COMPUTE_SCORES] Timeliness posterior shape: {timeliness_posterior.shape}", flush=True)
+            
+            # Back-transform posteriors from standardized scale to original scale
+            price_posterior = price_posterior * self.price_data_std
+            timeliness_posterior = timeliness_posterior * self.timeliness_data_std
 
-        def extract_vendor_id(vendor_name):
-            """Extract numeric vendor ID from vendor name (e.g., '3000004954 KAESER...' -> '3000004954')"""
-            if pd.isna(vendor_name):
+            def extract_vendor_id(vendor_name):
+                """Extract numeric vendor ID from vendor name (e.g., '3000004954 KAESER...' -> '3000004954')"""
+                if pd.isna(vendor_name):
+                    return None
+                name_str = str(vendor_name).strip()
+                parts = name_str.split()
+                # First part should be numeric vendor ID
+                if parts and parts[0].isdigit():
+                    return parts[0]
                 return None
-            name_str = str(vendor_name).strip()
-            parts = name_str.split()
-            # First part should be numeric vendor ID
-            if parts and parts[0].isdigit():
-                return parts[0]
-            return None
 
-        for idx, vendor_name in enumerate(vendor_names):
-            if idx >= len(price_posterior) or idx >= len(timeliness_posterior):
-                continue
+            for idx, vendor_name in enumerate(vendor_names):
+                if idx >= len(price_posterior) or idx >= len(timeliness_posterior):
+                    continue
 
-            vendor_df = df_clean[df_clean["vendor_name"] == vendor_name]
-            transaction_count = len(vendor_df)
+                vendor_df = df_clean[df_clean["vendor_name"] == vendor_name]
+                transaction_count = len(vendor_df)
 
-            price_mean = float(price_posterior[idx])
-            price_score = -price_mean
-            price_ci_lower = float(np.percentile(price_posterior, 2.5))
-            price_ci_upper = float(np.percentile(price_posterior, 97.5))
+                price_mean = float(price_posterior[idx])
+                price_score = -price_mean
+                price_ci_lower = float(np.percentile(price_posterior, 2.5))
+                price_ci_upper = float(np.percentile(price_posterior, 97.5))
 
-            timeliness_mean = float(timeliness_posterior[idx])
-            timeliness_score = -timeliness_mean
-            timeliness_ci_lower = float(np.percentile(timeliness_posterior, 2.5))
-            timeliness_ci_upper = float(np.percentile(timeliness_posterior, 97.5))
+                timeliness_mean = float(timeliness_posterior[idx])
+                timeliness_score = -timeliness_mean
+                timeliness_ci_lower = float(np.percentile(timeliness_posterior, 2.5))
+                timeliness_ci_upper = float(np.percentile(timeliness_posterior, 97.5))
 
-            combined_score = (price_score + timeliness_score) / 2
+                combined_score = (price_score + timeliness_score) / 2
 
-            vendor_scores.append({
-                "vendor_name": str(vendor_name),
-                "vendor_id": extract_vendor_id(vendor_name),
-                "price_accuracy_score": price_score,
-                "price_accuracy_ci_lower": price_ci_lower,
-                "price_accuracy_ci_upper": price_ci_upper,
-                "timeliness_score": timeliness_score,
-                "timeliness_ci_lower": timeliness_ci_lower,
-                "timeliness_ci_upper": timeliness_ci_upper,
-                "combined_rank_score": combined_score,
-                "transaction_count": transaction_count,
-            })
+                vendor_scores.append({
+                    "vendor_name": str(vendor_name),
+                    "vendor_id": extract_vendor_id(vendor_name),
+                    "price_accuracy_score": price_score,
+                    "price_accuracy_ci_lower": price_ci_lower,
+                    "price_accuracy_ci_upper": price_ci_upper,
+                    "timeliness_score": timeliness_score,
+                    "timeliness_ci_lower": timeliness_ci_lower,
+                    "timeliness_ci_upper": timeliness_ci_upper,
+                    "combined_rank_score": combined_score,
+                    "transaction_count": transaction_count,
+                })
 
-        vendor_scores.sort(key=lambda x: x["combined_rank_score"], reverse=True)
+            print(f"[COMPUTE_SCORES] Created {len(vendor_scores)} vendor scores", flush=True)
+            vendor_scores.sort(key=lambda x: x["combined_rank_score"], reverse=True)
 
-        for idx, score in enumerate(vendor_scores):
-            score["rank"] = idx + 1
+            for idx, score in enumerate(vendor_scores):
+                score["rank"] = idx + 1
 
-        return [VendorBHMScore(**score) for score in vendor_scores]
+            print(f"[COMPUTE_SCORES] Returning {len(vendor_scores)} scores", flush=True)
+            return [VendorBHMScore(**score) for score in vendor_scores]
+        
+        except Exception as e:
+            print(f"[COMPUTE_SCORES] ERROR: {e}", flush=True)
+            traceback.print_exc()
+            return []
 
 
     def fit_and_rank(
@@ -613,7 +629,6 @@ class BHMService:
                 posterior_version=None,
             )
         except Exception as e:
-            print(f"Error in fit_and_rank: {e}")
             raise ValueError(f"Failed to fit BHM models: {str(e)}")
 
 

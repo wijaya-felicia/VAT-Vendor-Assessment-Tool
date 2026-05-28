@@ -6,10 +6,30 @@ from typing import Optional
 from src.dependencies.services import get_bhm_service, get_storage_manager_cached
 from src.dependencies.auth import get_current_user, get_optional_user_from_header
 from src.database import get_db, BHMResult, ModelCheckpoint, VendorRanking
-from src.database.models import User
+from src.database.models import User, UploadRecord
 from src.types.models import BHMRankingsResponse, BHMVendorDetailResponse, ModelLockRequest, ModelLockResponse
 
 bhm_router = APIRouter()
+
+
+@bhm_router.get("/latest-session")
+async def get_latest_session(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the user's latest upload session ID."""
+    latest_upload = db.query(UploadRecord)\
+        .filter(UploadRecord.user_id == current_user.id)\
+        .order_by(UploadRecord.created_at.desc())\
+        .first()
+    
+    if not latest_upload:
+        raise HTTPException(
+            status_code=404,
+            detail="No uploads found for this user"
+        )
+    
+    return {"session_id": latest_upload.session_id}
 
 
 @bhm_router.get("/rankings", response_model=BHMRankingsResponse)
@@ -22,8 +42,11 @@ async def get_vendor_rankings(
 ):
 
     try:
+        print(f"[RANKINGS_ENDPOINT] Request received for session: {session_id}", flush=True)
+        
         # Retrieve merged data
         df = storage_manager.retrieve_data(session_id)
+        print(f"[RANKINGS_ENDPOINT] Retrieved data, shape: {df.shape if df is not None else 'None'}", flush=True)
 
         if df is None:
             raise HTTPException(
@@ -35,21 +58,29 @@ async def get_vendor_rankings(
         prior_checkpoint = None
         
         if current_user:
-            latest_checkpoint = db.query(ModelCheckpoint)\
-                .filter(
-                    ModelCheckpoint.is_locked == True,
-                    ModelCheckpoint.locked_by_user_id == current_user.id
-                )\
-                .order_by(ModelCheckpoint.model_year.desc())\
-                .first()
-            
-            if latest_checkpoint:
-                prior_checkpoint = {
-                    "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
-                    "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
-                }
-
+            try:
+                latest_checkpoint = db.query(ModelCheckpoint)\
+                    .filter(
+                        ModelCheckpoint.is_locked == True,
+                        ModelCheckpoint.locked_by_user_id == current_user.id
+                    )\
+                    .order_by(ModelCheckpoint.model_year.desc())\
+                    .first()
+                
+                if latest_checkpoint:
+                    prior_checkpoint = {
+                        "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
+                        "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
+                    }
+                    print(f"[RANKINGS_ENDPOINT] Using prior checkpoint from user {current_user.id}", flush=True)
+            except Exception as e:
+                print(f"[RANKINGS_ENDPOINT] Warning: Could not retrieve checkpoint: {e}", flush=True)
+                prior_checkpoint = None
+        
+        print(f"[RANKINGS_ENDPOINT] Calling fit_and_rank...", flush=True)
         rankings_response = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
+        print(f"[RANKINGS_ENDPOINT] fit_and_rank completed", flush=True)
+        
         rankings_response.session_id = session_id
 
         if rankings_response.convergence_status == "not_converged":
@@ -58,11 +89,15 @@ async def get_vendor_rankings(
         return rankings_response
 
     except ImportError as e:
+        print(f"[RANKINGS_ENDPOINT] ImportError: {e}", flush=True)
         raise HTTPException(
             status_code=503,
             detail=f"BHM service unavailable: {str(e)}"
         )
     except Exception as e:
+        print(f"[RANKINGS_ENDPOINT] Exception: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Error computing rankings: {str(e)}"
@@ -93,19 +128,23 @@ async def get_vendor_detail(
         prior_checkpoint = None
         
         if current_user:
-            latest_checkpoint = db.query(ModelCheckpoint)\
-                .filter(
-                    ModelCheckpoint.is_locked == True,
-                    ModelCheckpoint.locked_by_user_id == current_user.id
-                )\
-                .order_by(ModelCheckpoint.model_year.desc())\
-                .first()
-            
-            if latest_checkpoint:
-                prior_checkpoint = {
-                    "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
-                    "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
-                }
+            try:
+                latest_checkpoint = db.query(ModelCheckpoint)\
+                    .filter(
+                        ModelCheckpoint.is_locked == True,
+                        ModelCheckpoint.locked_by_user_id == current_user.id
+                    )\
+                    .order_by(ModelCheckpoint.model_year.desc())\
+                    .first()
+                
+                if latest_checkpoint:
+                    prior_checkpoint = {
+                        "price_posteriors": latest_checkpoint.price_accuracy_posteriors,
+                        "timeliness_posteriors": latest_checkpoint.timeliness_posteriors,
+                    }
+            except Exception as e:
+                print(f"[VENDOR_DETAIL_ENDPOINT] Warning: Could not retrieve checkpoint: {e}", flush=True)
+                prior_checkpoint = None
 
         rankings_response = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
 
