@@ -20,9 +20,9 @@ def get_dashboard_service() -> DashboardService:
 def get_bhm_service() -> BHMService:
     try:
         return BHMService(
-            mcmc_iterations=8000,  # Increased for better convergence
-            mcmc_chains=8,         # Increased for better mixing
-            mcmc_tuning=2000,      # Increased for better chain initialization
+            mcmc_iterations=8000,   # 8000 iterations for better convergence
+            mcmc_chains=8,          # 8 chains for robust sampling
+            mcmc_tuning=2000,       # 2000 tuning steps
         )
     except ImportError as e:
         raise ImportError(f"BHM service requires PyMC: {e}")

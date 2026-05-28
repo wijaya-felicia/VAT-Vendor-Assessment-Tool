@@ -179,9 +179,9 @@ class DashboardService:
             if len(discrepancies) > 0:
                 trend_data.append({
                     "vendor_name": str(vendor_name),
-                    "mean_price_discrepancy": float(discrepancies.mean()),
-                    "min_price_discrepancy": float(discrepancies.min()),
-                    "max_price_discrepancy": float(discrepancies.max()),
+                    "mean": float(discrepancies.mean()),
+                    "min": float(discrepancies.min()),
+                    "max": float(discrepancies.max()),
                     "count": len(discrepancies),
                 })
 
@@ -214,7 +214,7 @@ class DashboardService:
                 for label, count in counts.items():
                     distribution.append({
                         "vendor_name": str(vendor_name),
-                        "delay_range": str(label),
+                        "delay_days": str(label),
                         "count": int(count),
                     })
 
@@ -243,8 +243,8 @@ class DashboardService:
 
             matrix.append({
                 "vendor_name": vendor_stats["vendor_name"],
-                "price_accuracy_score": round(price_score, 2),
-                "timeliness_score": round(timeliness_score, 2),
+                "price_accuracy": round(price_score, 2),
+                "timeliness": round(timeliness_score, 2),
                 "combined_score": round(combined_score, 2),
                 "transaction_count": vendor_stats["transaction_count"],
             })

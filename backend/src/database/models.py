@@ -165,18 +165,21 @@ class ModelCheckpoint(Base):
     __tablename__ = "model_checkpoints"
 
     id = Column(Integer, primary_key=True, index=True)
-    model_version = Column(String(10), unique=True, index=True, nullable=False)  # e.g., "2025"
-    model_year = Column(Integer, unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # User who locked this prior
+    model_version = Column(String(10), index=True, nullable=False)  # e.g., "2025"
+    model_year = Column(Integer, index=True, nullable=False)
 
     price_accuracy_posteriors = Column(JSON, nullable=False)
     timeliness_posteriors = Column(JSON, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     created_by_bhm_result_id = Column(Integer, nullable=True)
+    locked_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Track who locked it
+    locked_at = Column(DateTime, nullable=True, index=True)  # When it was locked
     
     vendor_count = Column(Integer, nullable=False)
     description = Column(Text, nullable=True) 
-    is_locked = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=False, index=True)
 
 
 class SessionData(Base):

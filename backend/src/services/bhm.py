@@ -55,6 +55,12 @@ class BHMService:
         self.price_idata = None
         self.timeliness_idata = None
         
+        # Data standardization parameters
+        self.price_data_mean = 0.0
+        self.price_data_std = 1.0
+        self.timeliness_data_mean = 0.0
+        self.timeliness_data_std = 1.0
+        
         self.prior_analyzer = PriorAnalyzer()
         self.prior_analysis_log: Dict[str, Dict[str, Any]] = {}
 
@@ -167,6 +173,15 @@ class BHMService:
             "using_checkpoint": prior_checkpoint is not None,
         }
         
+        # Log prior recommendations for debugging
+        print(f"\n[Prior Analysis - {metric_type}]")
+        print(f"  Transaction scale: {scale_transaction:.4f}")
+        print(f"  Vendor prior family: {vendor_rec['family']} (confidence: {vendor_rec.get('confidence', 'N/A')})")
+        print(f"  Item prior family: {item_rec['family']} (confidence: {item_rec.get('confidence', 'N/A')})")
+        print(f"  Transaction prior family: {transaction_rec['family']} (confidence: {transaction_rec.get('confidence', 'N/A')})")
+        print(f"  Scale factor applied: 0.7 (70% regularization)")
+        print(f"  Using checkpoint: {prior_checkpoint is not None}")
+        
         # Handle Bayesian updating if checkpoint provided
         if prior_checkpoint:
             checkpoint_prior = self.prior_analyzer.extract_prior_from_checkpoint(
@@ -177,7 +192,7 @@ class BHMService:
                 priors["vendor_mu_prior"] = checkpoint_prior["mu"]
                 priors["vendor_sigma_prior"] = checkpoint_prior["sigma"]
         
-        # Moderate prior regularization for sparse data
+        # Prior regularization for sparse data
         # (Reduces divergences without over-constraining the posterior)
         scale_factor = 0.7  # Use 70% of original scales (less aggressive)
         
@@ -213,12 +228,22 @@ class BHMService:
             n_items = len(item_map)
             n_vendors = len(vendor_map)
             
+            # Standardize data for better MCMC convergence
+            metric_mean = np.mean(metric_values)
+            metric_std = np.std(metric_values)
+            metric_std = metric_std if metric_std > 0 else 1.0
+            metric_values_std = (metric_values - metric_mean) / metric_std
+            
             # Get adaptive priors
             priors = self._analyze_and_recommend_priors(
-                metric_values, item_codes, vendor_codes,
+                metric_values_std, item_codes, vendor_codes,
                 metric_type="price",
                 prior_checkpoint=prior_checkpoint,
             )
+            
+            # Store standardization parameters for later predictions
+            self.price_data_mean = metric_mean
+            self.price_data_std = metric_std
 
             with pm.Model() as model:
                 # Vendor-level hyperpriors
@@ -239,11 +264,11 @@ class BHMService:
                     scale=priors["scale_transaction"]
                 )
 
-                vendor_effects = pm.Normal(
+                # Non-centered parameterization for vendor effects
+                vendor_effects_raw = pm.Normal("vendor_effects_raw", mu=0, sigma=1, shape=n_vendors)
+                vendor_effects = pm.Deterministic(
                     "vendor_effects",
-                    mu=vendor_mu,
-                    sigma=vendor_sigma,
-                    shape=n_vendors,
+                    vendor_mu + vendor_sigma * vendor_effects_raw
                 )
                 
                 # Item-level hyperpriors
@@ -254,11 +279,11 @@ class BHMService:
                     scale=priors["scale_transaction"] * 0.5
                 )
 
-                item_effects = pm.Normal(
+                # Non-centered parameterization for item effects
+                item_effects_raw = pm.Normal("item_effects_raw", mu=0, sigma=1, shape=n_items)
+                item_effects = pm.Deterministic(
                     "item_effects",
-                    mu=item_mu,
-                    sigma=item_sigma,
-                    shape=n_items,
+                    item_mu + item_sigma * item_effects_raw
                 )
 
                 # Transaction-level noise
@@ -274,7 +299,7 @@ class BHMService:
                     "y",
                     mu=mu,
                     sigma=sigma_transaction,
-                    observed=metric_values,
+                    observed=metric_values_std,
                 )
 
                 with warnings.catch_warnings():
@@ -286,8 +311,7 @@ class BHMService:
                         return_inferencedata=True,
                         progressbar=False,
                         random_seed=42,
-                        init="advi+adapt_diag",
-                        target_accept=0.95,
+                        target_accept=0.95,  # Higher target_accept for better adaptation
                     )
 
             self.price_model = model
@@ -315,12 +339,22 @@ class BHMService:
             n_items = len(item_map)
             n_vendors = len(vendor_map)
             
+            # Standardize data for better MCMC convergence
+            metric_mean = np.mean(metric_values)
+            metric_std = np.std(metric_values)
+            metric_std = metric_std if metric_std > 0 else 1.0
+            metric_values_std = (metric_values - metric_mean) / metric_std
+            
             # Get adaptive priors
             priors = self._analyze_and_recommend_priors(
-                metric_values, item_codes, vendor_codes,
+                metric_values_std, item_codes, vendor_codes,
                 metric_type="timeliness",
                 prior_checkpoint=prior_checkpoint,
             )
+            
+            # Store standardization parameters for later predictions
+            self.timeliness_data_mean = metric_mean
+            self.timeliness_data_std = metric_std
 
             with pm.Model() as model:
                 # Vendor-level hyperpriors
@@ -341,11 +375,11 @@ class BHMService:
                     scale=priors["scale_transaction"]
                 )
 
-                vendor_effects = pm.Normal(
+                # Non-centered parameterization for vendor effects
+                vendor_effects_raw = pm.Normal("vendor_effects_raw", mu=0, sigma=1, shape=n_vendors)
+                vendor_effects = pm.Deterministic(
                     "vendor_effects",
-                    mu=vendor_mu,
-                    sigma=vendor_sigma,
-                    shape=n_vendors,
+                    vendor_mu + vendor_sigma * vendor_effects_raw
                 )
 
                 # Item-level hyperpriors
@@ -356,11 +390,11 @@ class BHMService:
                     scale=priors["scale_transaction"] * 0.5
                 )
 
-                item_effects = pm.Normal(
+                # Non-centered parameterization for item effects
+                item_effects_raw = pm.Normal("item_effects_raw", mu=0, sigma=1, shape=n_items)
+                item_effects = pm.Deterministic(
                     "item_effects",
-                    mu=item_mu,
-                    sigma=item_sigma,
-                    shape=n_items,
+                    item_mu + item_sigma * item_effects_raw
                 )
 
                 # Transaction-level noise
@@ -376,7 +410,7 @@ class BHMService:
                     "y",
                     mu=mu,
                     sigma=sigma_transaction,
-                    observed=metric_values,
+                    observed=metric_values_std,
                 )
 
                 with warnings.catch_warnings():
@@ -388,8 +422,7 @@ class BHMService:
                         return_inferencedata=True,
                         progressbar=False,
                         random_seed=42,
-                        init="advi+adapt_diag",
-                        target_accept=0.95,
+                        target_accept=0.95,  # Higher target_accept for better adaptation
                     )
 
             self.timeliness_model = model
@@ -494,6 +527,10 @@ class BHMService:
         vendor_scores = []
         price_posterior = self.price_idata.posterior["vendor_effects"].values.flatten()
         timeliness_posterior = self.timeliness_idata.posterior["vendor_effects"].values.flatten()
+        
+        # Back-transform posteriors from standardized scale to original scale
+        price_posterior = price_posterior * self.price_data_std
+        timeliness_posterior = timeliness_posterior * self.timeliness_data_std
 
         def extract_vendor_id(vendor_name):
             """Extract numeric vendor ID from vendor name (e.g., '3000004954 KAESER...' -> '3000004954')"""
