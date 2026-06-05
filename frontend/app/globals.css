@@ -397,7 +397,6 @@ a:hover {
 
 /* ============ MAIN CONTAINER ============ */
 main {
-  min-height: calc(100vh - 70px);
   padding-top: 2rem;
   padding-bottom: 2rem;
 }

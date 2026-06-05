@@ -25,16 +25,16 @@ export default function Navbar() {
     };
 
     return (
-        <BootstrapNavbar expand="lg" className="navbar sticky-top">
+        <BootstrapNavbar expand="lg" className="navbar">
             <Container fluid>
                 <BootstrapNavbar.Brand as={Link} href="/">
-                    ⚡ VAT
+                    VAT
                 </BootstrapNavbar.Brand>
                 <BootstrapNavbar.Toggle aria-controls="basic-navbar-nav" />
                 <BootstrapNavbar.Collapse id="basic-navbar-nav">
                     <Nav className="ms-auto">
                         <Nav.Link as={Link} href="/upload">
-                            📤 Upload
+                            Upload
                         </Nav.Link>
                         {user ? (
                             <>
@@ -49,7 +49,7 @@ export default function Navbar() {
                                 </Nav.Link>
                                 <div className="ms-3">
                                     <span className="text-light me-3">
-                                        👤 {user.email}
+                                        {user.email}
                                     </span>
                                     <Button
                                         variant="outline-light"

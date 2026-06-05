@@ -86,7 +86,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                         <Col lg={6}>
                             <div className="card p-4">
                                 <h6 className="text-info mb-4">
-                                    💰 Price Accuracy Score
+                                    Price Accuracy Score
                                 </h6>
                                 <div className="mb-3">
                                     <div className="mb-2">
@@ -123,7 +123,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                         <Col lg={6}>
                             <div className="card p-4">
                                 <h6 className="text-info mb-4">
-                                    ⏱️ Timeliness Score
+                                    Timeliness Score
                                 </h6>
                                 <div className="mb-3">
                                     <div className="mb-2">
@@ -152,7 +152,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
 
                     <div className="card p-4 mt-4">
                         <h6 className="text-info mb-4">
-                            📊 Overall Combined Score
+                            Overall Combined Score
                         </h6>
                         <div className="row">
                             <div className="col-md-6">
@@ -186,7 +186,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
 
                     <div className="card p-4 mt-4">
                         <h6 className="text-info mb-4">
-                            🔍 Convergence Diagnostics
+                            Convergence Diagnostics
                         </h6>
                         <div className="table-responsive">
                             <table className="table table-sm">
@@ -251,9 +251,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                     </div>
 
                     <div className="card p-4 mt-4">
-                        <h6 className="text-info mb-3">
-                            📈 Summary Statistics
-                        </h6>
+                        <h6 className="text-info mb-3">Summary Statistics</h6>
                         <Row>
                             <div className="col-md-6">
                                 <p>

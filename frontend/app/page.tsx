@@ -62,13 +62,13 @@ export default function HomePage() {
                                             href="/dashboard"
                                             className="btn btn-primary btn-lg"
                                         >
-                                            📊 Go to Dashboard
+                                            Go to Dashboard
                                         </Link>
                                         <Link
                                             href="/rankings"
                                             className="btn btn-info btn-lg"
                                         >
-                                            🏆 View Rankings
+                                            View Rankings
                                         </Link>
                                     </div>
                                 </>
@@ -88,23 +88,23 @@ export default function HomePage() {
                                             className="btn btn-success btn-lg flex-fill"
                                             style={{ background: "#10b981" }}
                                         >
-                                            📤 Upload Data Now!
+                                            Upload Data Now!
                                         </Link>
                                         <Link
                                             href="/login"
                                             className="btn btn-primary btn-lg"
                                         >
-                                            🔑 Login
+                                            Login
                                         </Link>
                                         <Link
                                             href="/register"
                                             className="btn btn-outline-primary btn-lg"
                                         >
-                                            ✏️ Register
+                                            Register
                                         </Link>
                                     </div>
-                                    <div className="alert alert-info small">
-                                        <strong>💡 Start Now:</strong> Click
+                                    <div className="small">
+                                        <strong>Start Now:</strong> Click
                                         <em> "Upload Data Now"</em> to analyze
                                         vendor performance without creating an
                                         account. Or create an account to save
@@ -158,7 +158,7 @@ export default function HomePage() {
                                     </span>
                                 </li>
                             </ul>
-                            <div className="alert alert-info small">
+                            <div className="small">
                                 <strong>Best part?</strong> No login required to
                                 upload and analyze your data! Just click{" "}
                                 <em>"Upload Data Now"</em> and get insights in

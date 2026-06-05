@@ -122,7 +122,7 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
 
     return (
         <div className="card p-4 mb-4">
-            <h5 className="mb-4 text-info">📤 Upload Vendor Data Files</h5>
+            <h5 className="mb-4 text-info">Upload Vendor Data Files</h5>
 
             <Form onSubmit={handleSubmit}>
                 <div className="row mb-4">
@@ -216,13 +216,13 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
                             Processing...
                         </>
                     ) : (
-                        "🚀 Upload & Process"
+                        "Upload & Process"
                     )}
                 </Button>
             </Form>
 
-            <div className="mt-4 pt-3 border-top">
-                <h6 className="text-light small">ℹ️ Required File Format</h6>
+            <div className="mt-4 pt-2 border-top">
+                <h6 className="text-light small">Required File Format</h6>
                 <ListGroup variant="flush" className="small">
                     <ListGroup.Item className="bg-transparent border-0 text-light px-0">
                         • All files must be Excel (.xlsx or .xls)

@@ -37,13 +37,13 @@ export default function PublicUploadPage() {
     };
 
     return (
-        <Container fluid className="py-5">
+        <Container fluid>
             {/* Upload Section */}
-            <Row className="mb-5">
+            <Row>
                 <Col lg={8} className="mx-auto">
                     <Card className="shadow-lg">
                         <Card.Header className="d-flex justify-content-between align-items-center">
-                            <h4 className="mb-0">📤 Upload Vendor Data</h4>
+                            <h4 className="mb-0">Upload Vendor Data</h4>
                         </Card.Header>
                         <Card.Body>
                             <p
@@ -62,7 +62,6 @@ export default function PublicUploadPage() {
                     </Card>
                 </Col>
             </Row>
-
             {/* Messages */}
             {error && (
                 <Row className="mb-4">
@@ -77,7 +76,6 @@ export default function PublicUploadPage() {
                     </Col>
                 </Row>
             )}
-
             {success && (
                 <Row className="mb-4">
                     <Col lg={8} className="mx-auto">
@@ -91,14 +89,13 @@ export default function PublicUploadPage() {
                     </Col>
                 </Row>
             )}
-
             {uploadData && sessionId && (
                 <>
                     <div id="metrics-section" className="mb-5">
                         <Row className="mb-4">
                             <Col>
                                 <h3 className="text-center mb-4">
-                                    📊 Analysis Results
+                                    Analysis Results
                                 </h3>
                             </Col>
                         </Row>
@@ -128,18 +125,6 @@ export default function PublicUploadPage() {
                                 }}
                             >
                                 <Button
-                                    variant="info"
-                                    size="lg"
-                                    onClick={() =>
-                                        router.push(
-                                            `/rankings?session_id=${sessionId}`,
-                                        )
-                                    }
-                                    style={{ minWidth: "200px" }}
-                                >
-                                    🏆 View Rankings
-                                </Button>
-                                <Button
                                     variant="success"
                                     size="lg"
                                     onClick={() =>
@@ -149,22 +134,21 @@ export default function PublicUploadPage() {
                                     }
                                     style={{ minWidth: "200px" }}
                                 >
-                                    🤖 Start BHM Modelling
+                                    Start BHM Modelling
                                 </Button>
                             </div>
                         </Col>
                     </Row>
                 </>
             )}
-
             {/* Info Box */}
-            {!uploadData && (
+            {/* {!uploadData && (
                 <Row className="mt-5">
                     <Col lg={8} className="mx-auto">
                         <Card className="bg-opacity-10">
                             <Card.Body>
                                 <h5 style={{ color: "#ffffff" }}>
-                                    📋 What You'll Get:
+                                    What You'll Get:
                                 </h5>
                                 <ul
                                     className="mb-0"
@@ -180,7 +164,7 @@ export default function PublicUploadPage() {
                         </Card>
                     </Col>
                 </Row>
-            )}
+            )} */}
         </Container>
     );
 }

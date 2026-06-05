@@ -18,11 +18,23 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body suppressHydrationWarning style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+            <body
+                suppressHydrationWarning
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "100vh",
+                }}
+            >
                 <QueryProvider>
-                    <Navbar />
-                    <main className="container-fluid flex-grow-1">{children}</main>
-                    <Footer />
+                    <div
+                        className="d-flex flex-column justify-content-between"
+                        style={{ minHeight: "100vh" }}
+                    >
+                        <Navbar />
+                        <main className="container-fluid">{children}</main>
+                        <Footer />
+                    </div>
                 </QueryProvider>
             </body>
         </html>

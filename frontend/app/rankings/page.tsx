@@ -99,7 +99,7 @@ export default function RankingsPage() {
 
     return (
         <Container className="py-4">
-            <h1 className="page-title mb-2">🏆 Vendor Rankings</h1>
+            <h1 className="page-title mb-2">Vendor Rankings</h1>
             <p className="text-light mb-4" style={{ color: "#ffffff" }}>
                 Bayesian Hierarchical Model Results
             </p>
@@ -123,9 +123,9 @@ export default function RankingsPage() {
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value as any)}
                         >
-                            <option value="rank">📊 Overall Rank</option>
-                            <option value="price">💰 Price Accuracy</option>
-                            <option value="timeliness">⏱️ Timeliness</option>
+                            <option value="rank">Overall Rank</option>
+                            <option value="price">Price Accuracy</option>
+                            <option value="timeliness">Timeliness</option>
                         </Form.Select>
                     </Form.Group>
                 </Col>
@@ -155,7 +155,7 @@ export default function RankingsPage() {
                         {rankings.mcmc_chains}
                         {rankings.convergence_warnings.length > 0 && (
                             <div className="mt-2">
-                                ⚠️ {rankings.convergence_warnings.join(", ")}
+                                {rankings.convergence_warnings.join(", ")}
                             </div>
                         )}
                     </Alert>

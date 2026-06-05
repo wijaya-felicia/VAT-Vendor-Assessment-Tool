@@ -65,19 +65,13 @@ export default function RegisterPage() {
     };
 
     return (
-        <Container
-            className="d-flex align-items-center justify-content-center"
-            style={{ minHeight: "calc(100vh - 70px)" }}
-        >
+        <Container className="d-flex align-items-center justify-content-center">
             <Card
                 style={{ width: "100%", maxWidth: "400px" }}
                 className="shadow-lg"
             >
                 <Card.Body>
-                    <h1 className="text-center mb-4">
-                        <span style={{ color: "var(--accent-cyan)" }}>⚡</span>{" "}
-                        Register
-                    </h1>
+                    <h1 className="text-center mb-4 text-white">Register</h1>
 
                     {error && <Alert variant="danger">{error}</Alert>}
 
