@@ -75,18 +75,20 @@ export default function DashboardCharts({ sessionId }: DashboardChartsProps) {
                                 />
                                 <XAxis
                                     dataKey="vendor_name"
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
                                 />
                                 <YAxis
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
                                 />
                                 <Tooltip
                                     contentStyle={{
                                         background: "#2d3139",
                                         border: "1px solid #3d424a",
                                         borderRadius: "8px",
+                                        color: "#ffffff",
                                     }}
-                                    labelStyle={{ color: "#e0e0e0" }}
+                                    labelStyle={{ color: "#ffffff" }}
+                                    itemStyle={{ color: "#e0e0e0" }}
                                 />
                                 <Legend wrapperStyle={{ color: "#e0e0e0" }} />
                                 <Bar
@@ -130,21 +132,23 @@ export default function DashboardCharts({ sessionId }: DashboardChartsProps) {
                                     dataKey="price_accuracy"
                                     type="number"
                                     name="Price Accuracy Score"
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
                                 />
                                 <YAxis
                                     dataKey="timeliness"
                                     type="number"
                                     name="Timeliness Score"
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
                                 />
                                 <Tooltip
                                     contentStyle={{
                                         background: "#2d3139",
                                         border: "1px solid #3d424a",
                                         borderRadius: "8px",
+                                        color: "#ffffff",
                                     }}
-                                    labelStyle={{ color: "#e0e0e0" }}
+                                    labelStyle={{ color: "#ffffff" }}
+                                    itemStyle={{ color: "#e0e0e0" }}
                                     cursor={{ fill: "rgba(14, 165, 233, 0.1)" }}
                                 />
                                 <Scatter
@@ -159,7 +163,7 @@ export default function DashboardCharts({ sessionId }: DashboardChartsProps) {
 
                 <Col lg={12}>
                     <ChartContainer title="📦 Delivery Delay Distribution">
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={350}>
                             <BarChart data={delayDistribution.data || []}>
                                 <CartesianGrid
                                     strokeDasharray="3 3"
@@ -167,24 +171,62 @@ export default function DashboardCharts({ sessionId }: DashboardChartsProps) {
                                 />
                                 <XAxis
                                     dataKey="delay_days"
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={100}
                                 />
                                 <YAxis
-                                    tick={{ fill: "#a0a0a0", fontSize: 12 }}
+                                    yAxisId="left"
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
+                                    label={{
+                                        value: "Count",
+                                        angle: -90,
+                                        position: "insideLeft",
+                                    }}
+                                />
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    tick={{ fill: "#c8d6e5", fontSize: 12 }}
+                                    label={{
+                                        value: "Percentage (%)",
+                                        angle: 90,
+                                        position: "insideRight",
+                                    }}
                                 />
                                 <Tooltip
                                     contentStyle={{
                                         background: "#2d3139",
                                         border: "1px solid #3d424a",
                                         borderRadius: "8px",
+                                        color: "#ffffff",
                                     }}
-                                    labelStyle={{ color: "#e0e0e0" }}
+                                    labelStyle={{ color: "#ffffff" }}
+                                    itemStyle={{ color: "#e0e0e0" }}
+                                    formatter={(value: any, name: string) => {
+                                        if (name === "count") {
+                                            return [
+                                                `${value} deliveries`,
+                                                "Count",
+                                            ];
+                                        }
+                                        return [`${value}%`, "Percentage"];
+                                    }}
                                 />
                                 <Legend wrapperStyle={{ color: "#e0e0e0" }} />
                                 <Bar
+                                    yAxisId="left"
                                     dataKey="count"
                                     fill="#00d9ff"
                                     name="Number of Deliveries"
+                                />
+                                <Bar
+                                    yAxisId="right"
+                                    dataKey="percentage"
+                                    fill="#ff9500"
+                                    name="Percentage"
+                                    opacity={0.6}
                                 />
                             </BarChart>
                         </ResponsiveContainer>

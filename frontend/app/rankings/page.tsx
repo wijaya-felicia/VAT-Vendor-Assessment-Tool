@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useBHMRankings } from "@/hooks/useBHM";
 import { api } from "@/lib/api";
+import MCMCDiagnostics from "@/components/BHM/MCMCDiagnostics";
 
 export default function RankingsPage() {
     const { user, isLoading, checkAuth } = useAuthStore();
@@ -159,6 +160,8 @@ export default function RankingsPage() {
                             </div>
                         )}
                     </Alert>
+
+                    {sessionId && <MCMCDiagnostics sessionId={sessionId} />}
 
                     <div className="table-responsive">
                         <table className="table table-striped table-hover">

@@ -188,36 +188,39 @@ class DashboardService:
         return trend_data
 
     def get_delay_distribution(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-
+        """Get delay distribution aggregated across ALL vendors."""
+        
         delay_col = None
         if "delay_days" in df.columns:
             delay_col = "delay_days"
         elif "delay" in df.columns:
             delay_col = "delay"
         
-        if delay_col is None or "vendor_name" not in df.columns:
+        if delay_col is None:
             return []
 
+        # Define bins for delay categories
         bins = [-float('inf'), 0, 5, 10, 15, 20, 30, float('inf')]
         labels = ["Early", "0-5 days", "5-10 days", "10-15 days", "15-20 days", "20-30 days", "30+ days"]
-
+        
+        # Get all delays across all vendors
+        delays = df[delay_col].dropna()
+        
+        if len(delays) == 0:
+            return []
+        
+        # Bin all delays together (not by vendor)
+        binned = pd.cut(delays, bins=bins, labels=labels, right=False)
+        counts = binned.value_counts().sort_index()
+        
         distribution = []
-
-        for vendor_name, vendor_df in df.groupby("vendor_name"):
-            delays = vendor_df[delay_col].dropna()
-
-            if len(delays) > 0:
-                # Bin the delays
-                binned = pd.cut(delays, bins=bins, labels=labels, right=False)
-                counts = binned.value_counts().sort_index()
-
-                for label, count in counts.items():
-                    distribution.append({
-                        "vendor_name": str(vendor_name),
-                        "delay_days": str(label),
-                        "count": int(count),
-                    })
-
+        for label, count in counts.items():
+            distribution.append({
+                "delay_days": str(label),
+                "count": int(count),
+                "percentage": round((int(count) / len(delays)) * 100, 1),
+            })
+        
         return distribution
 
     def get_vendor_performance_matrix(self, df: pd.DataFrame) -> List[Dict[str, Any]]:

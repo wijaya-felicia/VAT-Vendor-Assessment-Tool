@@ -20,6 +20,7 @@ except ImportError:
 
 from src.types.models import VendorBHMScore, BHMRankingsResponse, BHMDiagnostics
 from src.services.prior_analyzer import PriorAnalyzer
+from src.services.mcmc_diagnostics import MCMCDiagnostics
 
 
 class BHMService:
@@ -647,6 +648,97 @@ class BHMService:
             "timestamp": datetime.utcnow().isoformat(),
             "prior_analysis_log": self.prior_analysis_log,
         }
+
+    def get_mcmc_iteration_info(self) -> Dict[str, Dict[str, Any]]:
+        """Get detailed MCMC iteration counts and diagnostics."""
+        info = {}
+        
+        if self.price_idata is not None:
+            price_diag = MCMCDiagnostics(
+                self.price_idata, 
+                "price",
+                self.mcmc_tuning,
+                self.mcmc_iterations,
+                self.mcmc_chains
+            )
+            info["price"] = {
+                "iterations": price_diag.get_iteration_counts(),
+                "diagnostics": price_diag.get_prior_likelihood_posterior_info(),
+            }
+        
+        if self.timeliness_idata is not None:
+            timeliness_diag = MCMCDiagnostics(
+                self.timeliness_idata,
+                "timeliness", 
+                self.mcmc_tuning,
+                self.mcmc_iterations,
+                self.mcmc_chains
+            )
+            info["timeliness"] = {
+                "iterations": timeliness_diag.get_iteration_counts(),
+                "diagnostics": timeliness_diag.get_prior_likelihood_posterior_info(),
+            }
+        
+        return info
+
+    def generate_diagnostics_plots(self, output_dir: str = "bhm_diagnostics") -> bool:
+        """Generate all MCMC diagnostic plots."""
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"[PLOTS] Generating plots in {output_dir}", flush=True)
+        
+        success = True
+        
+        if self.price_idata is not None:
+            try:
+                print(f"[PLOTS] Creating price model diagnostics plots...", flush=True)
+                price_diag = MCMCDiagnostics(
+                    self.price_idata,
+                    "price",
+                    self.mcmc_tuning,
+                    self.mcmc_iterations,
+                    self.mcmc_chains
+                )
+                success &= price_diag.create_trace_plot(f"{output_dir}/price_traces.png")
+                success &= price_diag.create_iteration_summary_plot(f"{output_dir}/price_iterations_summary.png")
+                success &= price_diag.create_burn_in_analysis_plot(f"{output_dir}/price_burnin_analysis.png")
+                print(f"[PLOTS] Price plots created successfully", flush=True)
+            except Exception as e:
+                print(f"[PLOTS] Error creating price plots: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
+                success = False
+        else:
+            print(f"[PLOTS] price_idata is None, skipping price plots", flush=True)
+        
+        if self.timeliness_idata is not None:
+            try:
+                print(f"[PLOTS] Creating timeliness model diagnostics plots...", flush=True)
+                timeliness_diag = MCMCDiagnostics(
+                    self.timeliness_idata,
+                    "timeliness",
+                    self.mcmc_tuning,
+                    self.mcmc_iterations,
+                    self.mcmc_chains
+                )
+                success &= timeliness_diag.create_trace_plot(f"{output_dir}/timeliness_traces.png")
+                success &= timeliness_diag.create_iteration_summary_plot(f"{output_dir}/timeliness_iterations_summary.png")
+                success &= timeliness_diag.create_burn_in_analysis_plot(f"{output_dir}/timeliness_burnin_analysis.png")
+                print(f"[PLOTS] Timeliness plots created successfully", flush=True)
+            except Exception as e:
+                print(f"[PLOTS] Error creating timeliness plots: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
+                success = False
+        else:
+            print(f"[PLOTS] timeliness_idata is None, skipping timeliness plots", flush=True)
+        
+        if success:
+            print(f"[PLOTS] ✓ All MCMC diagnostics plots generated in {output_dir}/", flush=True)
+        else:
+            print(f"[PLOTS] ⚠ Some plots failed to generate", flush=True)
+        
+        return success
 
     def get_prior_audit_trail(self) -> Dict[str, Any]:
         """Return full prior analysis log for debugging/auditing."""

@@ -20,8 +20,8 @@ def get_dashboard_service() -> DashboardService:
 def get_bhm_service() -> BHMService:
     try:
         return BHMService(
-            mcmc_iterations=8000,   # 8000 iterations for better convergence
-            mcmc_chains=8,          # 8 chains for robust sampling
+            mcmc_iterations=40000,  # 40000 iterations per chain
+            mcmc_chains=2,          # 2 chains
             mcmc_tuning=2000,       # 2000 tuning steps
         )
     except ImportError as e:

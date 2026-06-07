@@ -9,6 +9,15 @@
   --bs-dark: #0f1419;
   --accent-cyan: #00d9ff;
   --accent-blue: #0ea5e9;
+  /* Override Bootstrap's dark-on-light defaults for dark theme */
+  --bs-body-color: #e0e0e0;
+  --bs-body-color-rgb: 224, 224, 224;
+  --bs-body-bg: #0f1419;
+  --bs-body-bg-rgb: 15, 20, 25;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: #9ca3af;
+  --bs-tertiary-color: #6b7280;
+  --bs-strong-color: #ffffff;
 }
 
 * {
@@ -95,10 +104,6 @@ body {
 }
 
 .card-body {
-  color: #ffffff;
-}
-
-.card h5, .card h6 {
   color: #ffffff;
 }
 
@@ -214,24 +219,64 @@ body {
   color: #ffffff !important;
 }
 
-/* Force white text on all relevant elements */
+/* Force white text on card headings only */
+/* Note: no !important here so .text-muted can override in cards */
 .card h6,
 .card h5,
 .card h4,
-.card h3,
-.card ul li,
-.card p,
-.list-group-item {
-  color: #ffffff !important;
+.card h3 {
+  color: #ffffff;
 }
 
-.small {
+/* Fix text-muted contrast on dark backgrounds */
+.text-muted {
+  color: #9ca3af !important;
+}
+
+.fw-600 {
+  font-weight: 600;
+}
+
+
+
+/* Form select on dark background */
+.form-select {
+  background-color: #2d3139;
+  border: 1px solid #3d424a;
+  color: #e0e0e0;
+  border-radius: 6px;
+}
+
+.form-select:focus {
+  background-color: #3d424a;
+  border-color: var(--accent-blue);
+  color: #e0e0e0;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+
+/* Nav tabs on dark background */
+.nav-tabs {
+  border-bottom-color: #3d424a;
+}
+
+.nav-tabs .nav-link {
+  color: #9ca3af !important;
+}
+
+.nav-tabs .nav-link.active {
   color: #ffffff !important;
+  background-color: #2d3139;
+  border-color: var(--accent-cyan) var(--accent-cyan) #2d3139;
 }
 
 /* ============ TABLES ============ */
 .table {
   color: #ffffff;
+}
+
+.table td,
+.table th {
+  color: #e0e0e0;
 }
 
 .table thead th {
