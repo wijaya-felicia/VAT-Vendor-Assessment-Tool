@@ -103,7 +103,7 @@ export default function HomePage() {
                                             Register
                                         </Link>
                                     </div>
-                                    <div className="small">
+                                    <div className="small text-white">
                                         <strong>Start Now:</strong> Click
                                         <em> "Upload Data Now"</em> to analyze
                                         vendor performance without creating an
@@ -158,7 +158,7 @@ export default function HomePage() {
                                     </span>
                                 </li>
                             </ul>
-                            <div className="small">
+                            <div className="small text-white">
                                 <strong>Best part?</strong> No login required to
                                 upload and analyze your data! Just click{" "}
                                 <em>"Upload Data Now"</em> and get insights in

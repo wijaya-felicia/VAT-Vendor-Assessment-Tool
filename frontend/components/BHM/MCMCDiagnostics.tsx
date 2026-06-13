@@ -138,8 +138,14 @@ export default function MCMCDiagnostics({ sessionId }: MCMCDiagnosticsProps) {
                     <h6 className="text-info mb-3">{title}</h6>
                     {isLoading && !hasError && (
                         <div className="text-center py-4">
-                            <Spinner animation="border" variant="info" size="sm" />
-                            <span className="ms-2 text-muted">Loading plot...</span>
+                            <Spinner
+                                animation="border"
+                                variant="info"
+                                size="sm"
+                            />
+                            <span className="ms-2 text-muted">
+                                Loading plot...
+                            </span>
                         </div>
                     )}
                     {hasError && (
@@ -360,9 +366,7 @@ export default function MCMCDiagnostics({ sessionId }: MCMCDiagnosticsProps) {
             >
                 <Nav variant="tabs" className="mb-4">
                     <Nav.Item>
-                        <Nav.Link eventKey="price">
-                            💰 Price Model
-                        </Nav.Link>
+                        <Nav.Link eventKey="price">💰 Price Model</Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
                         <Nav.Link eventKey="timeliness">

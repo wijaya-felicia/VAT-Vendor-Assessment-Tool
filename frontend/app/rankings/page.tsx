@@ -180,7 +180,6 @@ export default function RankingsPage() {
                                     <th className="text-end">Price Accuracy</th>
                                     <th className="text-end">Timeliness</th>
                                     <th className="text-end">Combined Score</th>
-                                    <th className="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -243,14 +242,6 @@ export default function RankingsPage() {
                                                     3,
                                                 )}
                                             </strong>
-                                        </td>
-                                        <td className="text-center">
-                                            <Link
-                                                href={`/rankings/${vendor.vendor_name}?session_id=${sessionId}`}
-                                                className="btn btn-info btn-sm"
-                                            >
-                                                Details
-                                            </Link>
                                         </td>
                                     </tr>
                                 ))}

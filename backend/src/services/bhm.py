@@ -55,7 +55,11 @@ class BHMService:
         self.timeliness_model = None
         self.price_idata = None
         self.timeliness_idata = None
-        
+
+        # Vendor/item ID maps from model fitting (Categorical-sorted order)
+        self.price_vendor_id_map: Dict[int, str] = {}
+        self.timeliness_vendor_id_map: Dict[int, str] = {}
+
         # Data standardization parameters
         self.price_data_mean = 0.0
         self.price_data_std = 1.0
@@ -245,6 +249,7 @@ class BHMService:
             # Store standardization parameters for later predictions
             self.price_data_mean = metric_mean
             self.price_data_std = metric_std
+            self.price_vendor_id_map = vendor_map
 
             with pm.Model() as model:
                 # Vendor-level hyperpriors
@@ -356,6 +361,7 @@ class BHMService:
             # Store standardization parameters for later predictions
             self.timeliness_data_mean = metric_mean
             self.timeliness_data_std = metric_std
+            self.timeliness_vendor_id_map = vendor_map
 
             with pm.Model() as model:
                 # Vendor-level hyperpriors
@@ -523,52 +529,61 @@ class BHMService:
                 print("[COMPUTE_SCORES] ERROR: Missing idata", flush=True)
                 return []
 
+            if not self.price_vendor_id_map or not self.timeliness_vendor_id_map:
+                print("[COMPUTE_SCORES] ERROR: Vendor ID maps not populated", flush=True)
+                return []
+
             # Clean data to match what was used in model fitting
-            # Only drop NaNs in vendor_name and metric columns (preserve missing product codes)
             delay_col = "delay_days" if "delay_days" in df.columns else "delay"
             df_clean = df.dropna(subset=["vendor_name", "price_discrepancy", delay_col])
-            
+
             vendor_names = df_clean["vendor_name"].unique()
             print(f"[COMPUTE_SCORES] Found {len(vendor_names)} vendors", flush=True)
-            
-            vendor_scores = []
-            price_posterior = self.price_idata.posterior["vendor_effects"].values.flatten()
-            timeliness_posterior = self.timeliness_idata.posterior["vendor_effects"].values.flatten()
-            
-            print(f"[COMPUTE_SCORES] Price posterior shape: {price_posterior.shape}", flush=True)
-            print(f"[COMPUTE_SCORES] Timeliness posterior shape: {timeliness_posterior.shape}", flush=True)
-            
-            # Back-transform posteriors from standardized scale to original scale
-            price_posterior = price_posterior * self.price_data_std
-            timeliness_posterior = timeliness_posterior * self.timeliness_data_std
+
+            # Build reverse map: vendor_name -> model index (Categorical-sorted order)
+            price_name_to_idx = {name: idx for idx, name in self.price_vendor_id_map.items()}
+            timeliness_name_to_idx = {name: idx for idx, name in self.timeliness_vendor_id_map.items()}
+
+            # Get full posterior arrays: shape (chains, draws, n_vendors)
+            price_posterior_all = self.price_idata.posterior["vendor_effects"].values
+            timeliness_posterior_all = self.timeliness_idata.posterior["vendor_effects"].values
+
+            print(f"[COMPUTE_SCORES] Price posterior shape: {price_posterior_all.shape}", flush=True)
+            print(f"[COMPUTE_SCORES] Timeliness posterior shape: {timeliness_posterior_all.shape}", flush=True)
 
             def extract_vendor_id(vendor_name):
-                """Extract numeric vendor ID from vendor name (e.g., '3000004954 KAESER...' -> '3000004954')"""
+                """Extract numeric vendor ID from vendor name."""
                 if pd.isna(vendor_name):
                     return None
                 name_str = str(vendor_name).strip()
                 parts = name_str.split()
-                # First part should be numeric vendor ID
                 if parts and parts[0].isdigit():
                     return parts[0]
                 return None
 
-            for idx, vendor_name in enumerate(vendor_names):
-                if idx >= len(price_posterior) or idx >= len(timeliness_posterior):
+            vendor_scores = []
+            for vendor_name in vendor_names:
+                price_idx = price_name_to_idx.get(vendor_name)
+                timeliness_idx = timeliness_name_to_idx.get(vendor_name)
+
+                if price_idx is None or timeliness_idx is None:
+                    print(f"[COMPUTE_SCORES] Skipping {vendor_name}: not in model posterior", flush=True)
                     continue
 
                 vendor_df = df_clean[df_clean["vendor_name"] == vendor_name]
                 transaction_count = len(vendor_df)
 
-                price_mean = float(price_posterior[idx])
-                price_score = -price_mean
-                price_ci_lower = float(np.percentile(price_posterior, 2.5))
-                price_ci_upper = float(np.percentile(price_posterior, 97.5))
+                # Extract per-vendor posterior samples and flatten across chains
+                price_samples = price_posterior_all[:, :, price_idx].flatten()
+                timeliness_samples = timeliness_posterior_all[:, :, timeliness_idx].flatten()
 
-                timeliness_mean = float(timeliness_posterior[idx])
-                timeliness_score = -timeliness_mean
-                timeliness_ci_lower = float(np.percentile(timeliness_posterior, 2.5))
-                timeliness_ci_upper = float(np.percentile(timeliness_posterior, 97.5))
+                price_score = float(np.mean(price_samples))
+                price_ci_lower = float(np.percentile(price_samples, 2.5))
+                price_ci_upper = float(np.percentile(price_samples, 97.5))
+
+                timeliness_score = -float(np.mean(timeliness_samples))
+                timeliness_ci_lower = float(np.percentile(timeliness_samples, 2.5))
+                timeliness_ci_upper = float(np.percentile(timeliness_samples, 97.5))
 
                 combined_score = (price_score + timeliness_score) / 2
 
@@ -593,7 +608,7 @@ class BHMService:
 
             print(f"[COMPUTE_SCORES] Returning {len(vendor_scores)} scores", flush=True)
             return [VendorBHMScore(**score) for score in vendor_scores]
-        
+
         except Exception as e:
             print(f"[COMPUTE_SCORES] ERROR: {e}", flush=True)
             traceback.print_exc()
