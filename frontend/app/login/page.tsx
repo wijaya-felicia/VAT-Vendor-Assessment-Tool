@@ -47,7 +47,7 @@ export default function LoginPage() {
                 },
                 access_token,
             );
-            router.push("/dashboard");
+            router.push("/upload");
         } catch (err: any) {
             setError(
                 err.response?.data?.detail ||

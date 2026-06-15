@@ -107,7 +107,7 @@ export default function MetricsCard({ sessionId }: MetricsCardProps) {
             </Row>
 
             <div className="mt-4 pt-3 border-top">
-                <h6 className="text-muted small mb-3">📊 Vendor Summary</h6>
+                <h6 className="text-info mb-4">📊 Vendor Summary</h6>
                 <div className="table-responsive">
                     <table className="table table-sm table-striped">
                         <thead>

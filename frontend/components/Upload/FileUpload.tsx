@@ -225,11 +225,21 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
                 <h6 className="text-light small">Required File Format</h6>
                 <ListGroup variant="flush" className="small">
                     <ListGroup.Item className="bg-transparent border-0 text-light px-0">
-                        • All files must be Excel (.xlsx or .xls)
+                        • All files must be Excel (.xlsx)
                     </ListGroup.Item>
                     <ListGroup.Item className="bg-transparent border-0 text-light px-0">
-                        • Files should contain columns: po_number, product_code,
-                        vendor_name, etc.
+                        • PO File must contain columns: date, po_number,
+                        vendor_name, product_code, product_name, quantity,
+                        price_per_unit, total_price.
+                    </ListGroup.Item>
+                    <ListGroup.Item className="bg-transparent border-0 text-light px-0">
+                        • OC File must contain columns: date, po_number,
+                        order_confirmation_number, product_code, quantity,
+                        price_per_unit, total_price.
+                    </ListGroup.Item>
+                    <ListGroup.Item className="bg-transparent border-0 text-light px-0">
+                        • SHIP File must contain columns: etd, po_number,
+                        vendor_name.
                     </ListGroup.Item>
                     <ListGroup.Item className="bg-transparent border-0 text-light px-0">
                         • Date format should be consistent (YYYY-MM-DD

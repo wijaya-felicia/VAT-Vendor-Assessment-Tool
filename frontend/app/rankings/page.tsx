@@ -183,13 +183,13 @@ export default function RankingsPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {sortedRankings.map((vendor) => (
+                                {sortedRankings.map((vendor, index) => (
                                     <tr key={vendor.vendor_name}>
                                         <td className="text-center">
                                             <span
-                                                className={`rank-badge ${getRankBadgeClass(vendor.rank)}`}
+                                                className={`rank-badge ${getRankBadgeClass(index + 1)}`}
                                             >
-                                                {vendor.rank}
+                                                {index + 1}
                                             </span>
                                         </td>
                                         <td className="fw-600">

@@ -585,7 +585,7 @@ class BHMService:
                 timeliness_ci_lower = float(np.percentile(timeliness_samples, 2.5))
                 timeliness_ci_upper = float(np.percentile(timeliness_samples, 97.5))
 
-                combined_score = (price_score + timeliness_score) / 2
+                combined_score = (-price_score + timeliness_score) / 2
 
                 vendor_scores.append({
                     "vendor_name": str(vendor_name),

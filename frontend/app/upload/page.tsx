@@ -94,7 +94,7 @@ export default function PublicUploadPage() {
                     <div id="metrics-section" className="mb-5">
                         <Row className="mb-4">
                             <Col>
-                                <h3 className="text-center mb-4">
+                                <h3 className="text-center mb-4 text-white">
                                     Analysis Results
                                 </h3>
                             </Col>

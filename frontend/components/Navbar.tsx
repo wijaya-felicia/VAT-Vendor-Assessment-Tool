@@ -38,14 +38,8 @@ export default function Navbar() {
                         </Nav.Link>
                         {user ? (
                             <>
-                                <Nav.Link as={Link} href="/dashboard">
-                                    Dashboard
-                                </Nav.Link>
                                 <Nav.Link as={Link} href="/rankings">
                                     Rankings
-                                </Nav.Link>
-                                <Nav.Link as={Link} href="/admin">
-                                    Admin
                                 </Nav.Link>
                                 <div className="ms-3">
                                     <span className="text-light me-3">
