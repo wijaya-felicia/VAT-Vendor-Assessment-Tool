@@ -1,9 +1,3 @@
-"""
-Bayesian Hierarchical Model service for vendor performance assessment.
-Supports adaptive priors based on data distribution analysis.
-Supports Bayesian updating using posteriors from previous years.
-"""
-
 from typing import Dict, List, Any, Optional, Tuple
 import pandas as pd
 import numpy as np
@@ -24,15 +18,6 @@ from src.services.mcmc_diagnostics import MCMCDiagnostics
 
 
 class BHMService:
-    """
-    Bayesian Hierarchical Model for vendor ranking.
-    
-    Supports:
-    - Data-driven adaptive priors
-    - Hierarchical analysis (transaction, item, vendor levels)
-    - Bayesian updating from previous year posteriors
-    - Full prior analysis audit trail
-    """
 
     def __init__(
         self, 
@@ -40,7 +25,6 @@ class BHMService:
         mcmc_chains: int = 8, 
         mcmc_tuning: int = 2000
     ):
-        """Initialize BHM service with MCMC configuration."""
         if pm is None:
             raise ImportError(
                 "PyMC is required for BHM functionality. "
@@ -56,11 +40,9 @@ class BHMService:
         self.price_idata = None
         self.timeliness_idata = None
 
-        # Vendor/item ID maps from model fitting (Categorical-sorted order)
         self.price_vendor_id_map: Dict[int, str] = {}
         self.timeliness_vendor_id_map: Dict[int, str] = {}
 
-        # Data standardization parameters
         self.price_data_mean = 0.0
         self.price_data_std = 1.0
         self.timeliness_data_mean = 0.0
@@ -70,7 +52,6 @@ class BHMService:
         self.prior_analysis_log: Dict[str, Dict[str, Any]] = {}
 
     def _hash_data(self, df: pd.DataFrame, metric_column: str) -> str:
-        """Create hash of data to detect if analysis cache is valid."""
         key_cols = [metric_column, "product_code", "vendor_name"]
         available = [c for c in key_cols if c in df.columns]
         data_bytes = pd.util.hash_pandas_object(
@@ -102,8 +83,6 @@ class BHMService:
             )
         
         try:
-            # Only drop NaNs in the metric and vendor columns (not product_code)
-            # This preserves transactions with missing product codes
             df_clean = df[[actual_metric_col, item_column, vendor_column]].copy()
             df_clean = df_clean.dropna(subset=[actual_metric_col, vendor_column])
         except Exception as e:
@@ -130,38 +109,29 @@ class BHMService:
         metric_type: str,
         prior_checkpoint: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Analyze data distribution and recommend priors.
-        Returns prior specifications for model construction.
-        """
         analysis = self.prior_analyzer.get_hierarchical_analysis(
             metric_values, item_codes, vendor_codes
         )
         
         priors = {}
         
-        # Transaction-level scale (for all sigma parameters)
         scale_transaction = self.prior_analyzer.get_scale_from_data(metric_values)
         
-        # Recommend vendor-level priors
         vendor_rec = self.prior_analyzer.recommend_prior_family(
             analysis["vendor"],
             is_positive_constrained=True
         )
         
-        # Recommend item-level priors
         item_rec = self.prior_analyzer.recommend_prior_family(
             analysis["item"],
             is_positive_constrained=True
         )
         
-        # Recommend transaction-level noise prior
         transaction_rec = self.prior_analyzer.recommend_prior_family(
             analysis["transaction"],
             is_positive_constrained=True
         )
         
-        # Store analysis log
         self.prior_analysis_log[metric_type] = {
             "analysis": {
                 "transaction": analysis["transaction"],
@@ -178,7 +148,6 @@ class BHMService:
             "using_checkpoint": prior_checkpoint is not None,
         }
         
-        # Log prior recommendations for debugging
         print(f"\n[Prior Analysis - {metric_type}]")
         print(f"  Transaction scale: {scale_transaction:.4f}")
         print(f"  Vendor prior family: {vendor_rec['family']} (confidence: {vendor_rec.get('confidence', 'N/A')})")
@@ -187,7 +156,6 @@ class BHMService:
         print(f"  Scale factor applied: 0.7 (70% regularization)")
         print(f"  Using checkpoint: {prior_checkpoint is not None}")
         
-        # Handle Bayesian updating if checkpoint provided
         if prior_checkpoint:
             checkpoint_prior = self.prior_analyzer.extract_prior_from_checkpoint(
                 prior_checkpoint, 
@@ -197,15 +165,13 @@ class BHMService:
                 priors["vendor_mu_prior"] = checkpoint_prior["mu"]
                 priors["vendor_sigma_prior"] = checkpoint_prior["sigma"]
         
-        # Prior regularization for sparse data
-        # (Reduces divergences without over-constraining the posterior)
-        scale_factor = 0.7  # Use 70% of original scales (less aggressive)
+        scale_factor = 0.7
         
         priors.update({
             "vendor_rec": vendor_rec,
             "item_rec": item_rec,
             "transaction_rec": transaction_rec,
-            "scale_transaction": scale_transaction * scale_factor,  # Regularized scale
+            "scale_transaction": scale_transaction * scale_factor,
             "scale_factor": scale_factor,
         })
         
@@ -217,14 +183,6 @@ class BHMService:
         df: pd.DataFrame, 
         prior_checkpoint: Optional[Dict[str, Any]] = None
     ) -> bool:
-        """
-        Fit hierarchical model for price_discrepancy.
-        
-        3-level hierarchy:
-        - Level 1: Within-item variation (transaction-level noise)
-        - Level 2: Between-item variation (item-level effects)
-        - Level 3: Between-vendor variation (vendor-level effects)
-        """
         try:
             metric_values, item_codes, vendor_codes, item_map, vendor_map = (
                 self.prepare_hierarchical_data(df, "price_discrepancy")
@@ -233,35 +191,29 @@ class BHMService:
             n_items = len(item_map)
             n_vendors = len(vendor_map)
             
-            # Standardize data for better MCMC convergence
             metric_mean = np.mean(metric_values)
             metric_std = np.std(metric_values)
             metric_std = metric_std if metric_std > 0 else 1.0
             metric_values_std = (metric_values - metric_mean) / metric_std
             
-            # Get adaptive priors
             priors = self._analyze_and_recommend_priors(
                 metric_values_std, item_codes, vendor_codes,
                 metric_type="price",
                 prior_checkpoint=prior_checkpoint,
             )
             
-            # Store standardization parameters for later predictions
             self.price_data_mean = metric_mean
             self.price_data_std = metric_std
             self.price_vendor_id_map = vendor_map
 
             with pm.Model() as model:
-                # Vendor-level hyperpriors
                 if "vendor_mu_prior" in priors:
-                    # Use checkpoint-based prior (Bayesian updating)
                     vendor_mu = pm.Normal(
                         "vendor_mu",
                         mu=priors["vendor_mu_prior"],
                         sigma=priors["vendor_sigma_prior"]
                     )
                 else:
-                    # Default weakly informative
                     vendor_mu = pm.Normal("vendor_mu", mu=0, sigma=priors["scale_transaction"] * 10)
                 
                 vendor_sigma = self._construct_prior(
@@ -270,14 +222,12 @@ class BHMService:
                     scale=priors["scale_transaction"]
                 )
 
-                # Non-centered parameterization for vendor effects
                 vendor_effects_raw = pm.Normal("vendor_effects_raw", mu=0, sigma=1, shape=n_vendors)
                 vendor_effects = pm.Deterministic(
                     "vendor_effects",
                     vendor_mu + vendor_sigma * vendor_effects_raw
                 )
                 
-                # Item-level hyperpriors
                 item_mu = pm.Normal("item_mu", mu=0, sigma=priors["scale_transaction"] * 5)
                 item_sigma = self._construct_prior(
                     "item_sigma",
@@ -285,14 +235,12 @@ class BHMService:
                     scale=priors["scale_transaction"] * 0.5
                 )
 
-                # Non-centered parameterization for item effects
                 item_effects_raw = pm.Normal("item_effects_raw", mu=0, sigma=1, shape=n_items)
                 item_effects = pm.Deterministic(
                     "item_effects",
                     item_mu + item_sigma * item_effects_raw
                 )
 
-                # Transaction-level noise
                 sigma_transaction = self._construct_prior(
                     "sigma_transaction",
                     priors["transaction_rec"],
@@ -317,7 +265,7 @@ class BHMService:
                         return_inferencedata=True,
                         progressbar=False,
                         random_seed=42,
-                        target_accept=0.95,  # Higher target_accept for better adaptation
+                        target_accept=0.95,
                     )
 
             self.price_model = model
@@ -333,10 +281,6 @@ class BHMService:
         df: pd.DataFrame, 
         prior_checkpoint: Optional[Dict[str, Any]] = None
     ) -> bool:
-        """
-        Fit hierarchical model for delay (timeliness).
-        Uses adaptive priors based on data distribution analysis.
-        """
         try:
             metric_values, item_codes, vendor_codes, item_map, vendor_map = (
                 self.prepare_hierarchical_data(df, "delay")
@@ -345,35 +289,29 @@ class BHMService:
             n_items = len(item_map)
             n_vendors = len(vendor_map)
             
-            # Standardize data for better MCMC convergence
             metric_mean = np.mean(metric_values)
             metric_std = np.std(metric_values)
             metric_std = metric_std if metric_std > 0 else 1.0
             metric_values_std = (metric_values - metric_mean) / metric_std
             
-            # Get adaptive priors
             priors = self._analyze_and_recommend_priors(
                 metric_values_std, item_codes, vendor_codes,
                 metric_type="timeliness",
                 prior_checkpoint=prior_checkpoint,
             )
             
-            # Store standardization parameters for later predictions
             self.timeliness_data_mean = metric_mean
             self.timeliness_data_std = metric_std
             self.timeliness_vendor_id_map = vendor_map
 
             with pm.Model() as model:
-                # Vendor-level hyperpriors
                 if "vendor_mu_prior" in priors:
-                    # Use checkpoint-based prior (Bayesian updating)
                     vendor_mu = pm.Normal(
                         "vendor_mu",
                         mu=priors["vendor_mu_prior"],
                         sigma=priors["vendor_sigma_prior"]
                     )
                 else:
-                    # Default weakly informative
                     vendor_mu = pm.Normal("vendor_mu", mu=0, sigma=priors["scale_transaction"] * 2)
                 
                 vendor_sigma = self._construct_prior(
@@ -382,14 +320,12 @@ class BHMService:
                     scale=priors["scale_transaction"]
                 )
 
-                # Non-centered parameterization for vendor effects
                 vendor_effects_raw = pm.Normal("vendor_effects_raw", mu=0, sigma=1, shape=n_vendors)
                 vendor_effects = pm.Deterministic(
                     "vendor_effects",
                     vendor_mu + vendor_sigma * vendor_effects_raw
                 )
 
-                # Item-level hyperpriors
                 item_mu = pm.Normal("item_mu", mu=0, sigma=priors["scale_transaction"])
                 item_sigma = self._construct_prior(
                     "item_sigma",
@@ -397,14 +333,12 @@ class BHMService:
                     scale=priors["scale_transaction"] * 0.5
                 )
 
-                # Non-centered parameterization for item effects
                 item_effects_raw = pm.Normal("item_effects_raw", mu=0, sigma=1, shape=n_items)
                 item_effects = pm.Deterministic(
                     "item_effects",
                     item_mu + item_sigma * item_effects_raw
                 )
 
-                # Transaction-level noise
                 sigma_transaction = self._construct_prior(
                     "sigma_transaction",
                     priors["transaction_rec"],
@@ -441,7 +375,6 @@ class BHMService:
 
     @staticmethod
     def _construct_prior(name: str, recommendation: Dict[str, Any], scale: float):
-        """Construct PyMC prior distribution based on recommendation."""
         family = recommendation["family"]
         
         if family == "Normal":
@@ -452,13 +385,11 @@ class BHMService:
             lam = 1.0 / scale if scale > 0 else 1.0
             return pm.Exponential(name, lam=lam)
         elif family == "Gamma":
-            # Shape=2, scale=scale (mean = 2*scale)
             return pm.Gamma(name, alpha=2, beta=1.0/scale)
         elif family == "HalfStudentT":
             nu = recommendation.get("nu", 3)
             return pm.HalfStudentT(name, nu=nu, sigma=scale)
         else:
-            # Fallback
             return pm.HalfNormal(name, sigma=scale)
 
 
@@ -490,7 +421,6 @@ class BHMService:
         return convergence_status, warnings_list
 
     def get_diagnostics(self) -> List[BHMDiagnostics]:
-        """Get MCMC convergence diagnostics for all model parameters."""
         diagnostics = []
 
         if self.price_idata is not None:
@@ -521,7 +451,6 @@ class BHMService:
 
 
     def compute_vendor_scores(self, df: pd.DataFrame) -> List[VendorBHMScore]:
-        """Compute vendor scores from posterior distributions."""
         import traceback
         print("[COMPUTE_SCORES] Starting", flush=True)
         try:
@@ -533,18 +462,15 @@ class BHMService:
                 print("[COMPUTE_SCORES] ERROR: Vendor ID maps not populated", flush=True)
                 return []
 
-            # Clean data to match what was used in model fitting
             delay_col = "delay_days" if "delay_days" in df.columns else "delay"
             df_clean = df.dropna(subset=["vendor_name", "price_discrepancy", delay_col])
 
             vendor_names = df_clean["vendor_name"].unique()
             print(f"[COMPUTE_SCORES] Found {len(vendor_names)} vendors", flush=True)
 
-            # Build reverse map: vendor_name -> model index (Categorical-sorted order)
             price_name_to_idx = {name: idx for idx, name in self.price_vendor_id_map.items()}
             timeliness_name_to_idx = {name: idx for idx, name in self.timeliness_vendor_id_map.items()}
 
-            # Get full posterior arrays: shape (chains, draws, n_vendors)
             price_posterior_all = self.price_idata.posterior["vendor_effects"].values
             timeliness_posterior_all = self.timeliness_idata.posterior["vendor_effects"].values
 
@@ -552,7 +478,6 @@ class BHMService:
             print(f"[COMPUTE_SCORES] Timeliness posterior shape: {timeliness_posterior_all.shape}", flush=True)
 
             def extract_vendor_id(vendor_name):
-                """Extract numeric vendor ID from vendor name."""
                 if pd.isna(vendor_name):
                     return None
                 name_str = str(vendor_name).strip()
@@ -573,7 +498,6 @@ class BHMService:
                 vendor_df = df_clean[df_clean["vendor_name"] == vendor_name]
                 transaction_count = len(vendor_df)
 
-                # Extract per-vendor posterior samples and flatten across chains
                 price_samples = price_posterior_all[:, :, price_idx].flatten()
                 timeliness_samples = timeliness_posterior_all[:, :, timeliness_idx].flatten()
 
@@ -620,7 +544,6 @@ class BHMService:
         df: pd.DataFrame, 
         prior_checkpoint: Optional[Dict[str, Any]] = None
     ) -> BHMRankingsResponse:
-        """Fit both models and compute vendor rankings."""
         try:
             price_fit_ok = self.fit_price_model(df, prior_checkpoint)
             if not price_fit_ok:
@@ -649,7 +572,6 @@ class BHMService:
 
 
     def save_posterior_checkpoint(self, model_year: str) -> Dict[str, Any]:
-        """Save posteriors for use as priors in next year's model."""
         if self.price_idata is None or self.timeliness_idata is None:
             raise ValueError("Models must be fit before saving checkpoint")
 
@@ -665,7 +587,6 @@ class BHMService:
         }
 
     def get_mcmc_iteration_info(self) -> Dict[str, Dict[str, Any]]:
-        """Get detailed MCMC iteration counts and diagnostics."""
         info = {}
         
         if self.price_idata is not None:
@@ -697,7 +618,6 @@ class BHMService:
         return info
 
     def generate_diagnostics_plots(self, output_dir: str = "bhm_diagnostics") -> bool:
-        """Generate all MCMC diagnostic plots."""
         import os
         os.makedirs(output_dir, exist_ok=True)
         print(f"[PLOTS] Generating plots in {output_dir}", flush=True)
@@ -756,5 +676,4 @@ class BHMService:
         return success
 
     def get_prior_audit_trail(self) -> Dict[str, Any]:
-        """Return full prior analysis log for debugging/auditing."""
         return self.prior_analysis_log

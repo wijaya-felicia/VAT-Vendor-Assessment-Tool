@@ -87,7 +87,6 @@ class DashboardService:
             if "price_discrepancy" in vendor_df.columns:
                 discrepancies = vendor_df["price_discrepancy"].dropna()
                 price_discrepancy_mean = float(discrepancies.mean()) if len(discrepancies) > 0 else 0.0
-                # std requires at least 2 values; return 0 for single value
                 price_discrepancy_std = float(discrepancies.std()) if len(discrepancies) > 1 else 0.0
             else:
                 price_discrepancy_mean = 0.0
@@ -102,7 +101,6 @@ class DashboardService:
             if delay_col is not None:
                 delays = vendor_df[delay_col].dropna()
                 delay_mean = float(delays.mean()) if len(delays) > 0 else 0.0
-                # std requires at least 2 values; return 0 for single value
                 delay_std = float(delays.std()) if len(delays) > 1 else 0.0
             else:
                 delay_mean = 0.0
@@ -188,7 +186,6 @@ class DashboardService:
         return trend_data
 
     def get_delay_distribution(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
-        """Get delay distribution aggregated across ALL vendors."""
         
         delay_col = None
         if "delay_days" in df.columns:
@@ -199,17 +196,14 @@ class DashboardService:
         if delay_col is None:
             return []
 
-        # Define bins for delay categories
         bins = [-float('inf'), 0, 5, 10, 15, 20, 30, float('inf')]
         labels = ["Early", "0-5 days", "5-10 days", "10-15 days", "15-20 days", "20-30 days", "30+ days"]
         
-        # Get all delays across all vendors
         delays = df[delay_col].dropna()
         
         if len(delays) == 0:
             return []
         
-        # Bin all delays together (not by vendor)
         binned = pd.cut(delays, bins=bins, labels=labels, right=False)
         counts = binned.value_counts().sort_index()
         

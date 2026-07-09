@@ -21,7 +21,6 @@ async def get_latest_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get the user's latest upload session ID."""
     latest_upload = db.query(UploadRecord)\
         .filter(UploadRecord.user_id == current_user.id)\
         .order_by(UploadRecord.created_at.desc())\
@@ -48,7 +47,6 @@ async def get_vendor_rankings(
     try:
         print(f"[RANKINGS_ENDPOINT] Request received for session: {session_id}", flush=True)
         
-        # Check if results already cached for this session
         model_cache = get_model_cache()
         cached = model_cache.get(session_id)
         
@@ -61,7 +59,6 @@ async def get_vendor_rankings(
             convergence_status, convergence_warnings = bhm_service.check_convergence()
         else:
             print(f"[RANKINGS_ENDPOINT] No cache, fitting models for session: {session_id}", flush=True)
-            # Retrieve merged data
             df = storage_manager.retrieve_data(session_id)
             print(f"[RANKINGS_ENDPOINT] Retrieved data, shape: {df.shape if df is not None else 'None'}", flush=True)
 
@@ -71,7 +68,6 @@ async def get_vendor_rankings(
                     detail=f"Session {session_id} not found or expired"
                 )
 
-            # Auto-retrieve latest locked checkpoint (only for logged-in users, filtered by user)
             prior_checkpoint = None
             
             if current_user:
@@ -98,7 +94,6 @@ async def get_vendor_rankings(
             rankings_response = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
             print(f"[RANKINGS_ENDPOINT] fit_and_rank completed", flush=True)
             
-            # Cache the fitted models for reuse
             model_cache.set(
                 session_id,
                 bhm_service.price_idata,
@@ -112,7 +107,6 @@ async def get_vendor_rankings(
             rankings_response.session_id = session_id
             return rankings_response
 
-        # Cached case: return response with cached data
         rankings_response = BHMRankingsResponse(
             session_id=session_id,
             model_type="Bayesian Hierarchical Model",
@@ -158,7 +152,6 @@ async def get_vendor_detail(
 ):
 
     try:
-        # Retrieve merged data
         df = storage_manager.retrieve_data(session_id)
 
         if df is None:
@@ -167,7 +160,6 @@ async def get_vendor_detail(
                 detail=f"Session {session_id} not found or expired"
             )
 
-        # Auto-retrieve latest locked checkpoint (only for logged-in users, filtered by user)
         prior_checkpoint = None
         
         if current_user:
@@ -244,7 +236,6 @@ async def lock_model_as_prior(
     bhm_service = Depends(get_bhm_service),
     db: Session = Depends(get_db),
 ):
-    """Lock the current model as prior for next audit year. Only available to authenticated users."""
 
     try:
         checkpoint_data = bhm_service.save_posterior_checkpoint(request.model_year)
@@ -252,14 +243,12 @@ async def lock_model_as_prior(
         vendor_count = len(checkpoint_data["price_posteriors"])
         now = datetime.utcnow()
 
-        # Check if checkpoint for this year and user already exists
         existing_checkpoint = db.query(ModelCheckpoint).filter(
             ModelCheckpoint.model_year == int(request.model_year),
             ModelCheckpoint.locked_by_user_id == current_user.id
         ).first()
         
         if existing_checkpoint:
-            # Update existing checkpoint
             existing_checkpoint.model_version = request.model_year
             existing_checkpoint.price_accuracy_posteriors = checkpoint_data["price_posteriors"]
             existing_checkpoint.timeliness_posteriors = checkpoint_data["timeliness_posteriors"]
@@ -270,7 +259,6 @@ async def lock_model_as_prior(
             existing_checkpoint.locked_at = now
             db.commit()
         else:
-            # Create new checkpoint
             checkpoint = ModelCheckpoint(
                 model_version=request.model_year,
                 model_year=int(request.model_year),
@@ -310,9 +298,7 @@ async def get_mcmc_iterations(
     current_user: Optional[User] = Depends(get_optional_user_from_header),
     db: Session = Depends(get_db),
 ):
-    """Get MCMC iteration counts and diagnostics."""
     try:
-        # Check cache first - avoid rerunning BHM
         model_cache = get_model_cache()
         cached = model_cache.get(session_id)
         
@@ -326,7 +312,6 @@ async def get_mcmc_iterations(
             if df is None:
                 raise HTTPException(status_code=404, detail="Session not found")
             
-            # Fit models if not already fitted
             prior_checkpoint = None
             if current_user:
                 try:
@@ -347,7 +332,6 @@ async def get_mcmc_iterations(
             
             _ = bhm_service.fit_and_rank(df, prior_checkpoint=prior_checkpoint)
             
-            # Cache the fitted models
             model_cache.set(
                 session_id,
                 bhm_service.price_idata,
@@ -358,7 +342,6 @@ async def get_mcmc_iterations(
             )
             print(f"[MCMC_ITERATIONS] Cached models for session: {session_id}", flush=True)
         
-        # Get iteration info from cached/fitted models
         iteration_info = bhm_service.get_mcmc_iteration_info()
         return iteration_info
     
@@ -376,9 +359,7 @@ async def get_mcmc_plot(
     current_user: Optional[User] = Depends(get_optional_user_from_header),
     db: Session = Depends(get_db),
 ):
-    """Get MCMC diagnostic plot images."""
     try:
-        # Check cache first - avoid rerunning BHM
         model_cache = get_model_cache()
         cached = model_cache.get(session_id)
         
@@ -397,7 +378,6 @@ async def get_mcmc_plot(
             if df is None:
                 raise HTTPException(status_code=404, detail="Session not found")
             
-            # Fit models if needed
             prior_checkpoint = None
             if current_user:
                 try:
@@ -421,7 +401,6 @@ async def get_mcmc_plot(
             print(f"[MCMC_PLOTS] After fit - price_idata is None: {bhm_service.price_idata is None}", flush=True)
             print(f"[MCMC_PLOTS] After fit - timeliness_idata is None: {bhm_service.timeliness_idata is None}", flush=True)
             
-            # Cache the fitted models
             model_cache.set(
                 session_id,
                 bhm_service.price_idata,
@@ -432,7 +411,6 @@ async def get_mcmc_plot(
             )
             print(f"[MCMC_PLOTS] Cached models for session: {session_id}", flush=True)
         
-        # Generate plots from cached/fitted models (use platform-independent temp dir)
         plot_dir = os.path.join(tempfile.gettempdir(), f"bhm_diagnostics_{session_id}")
         print(f"[MCMC_PLOTS] Plot directory: {plot_dir}", flush=True)
         
@@ -440,7 +418,6 @@ async def get_mcmc_plot(
             print(f"[MCMC_PLOTS] ERROR: Both idata are None after cache check", flush=True)
             raise HTTPException(status_code=500, detail="Models not fitted - no idata available")
         
-        # Only regenerate if plots don't already exist
         all_plots_exist = True
         for pt in ["traces", "iterations_summary", "burnin_analysis"]:
             for mt in ["price", "timeliness"]:
@@ -457,7 +434,6 @@ async def get_mcmc_plot(
             if not plot_ok:
                 print(f"[MCMC_PLOTS] WARNING: Plot generation returned False", flush=True)
         
-        # Map plot type to filename
         plot_mapping = {
             "traces": f"{metric_type}_traces.png",
             "iterations_summary": f"{metric_type}_iterations_summary.png",
@@ -473,7 +449,6 @@ async def get_mcmc_plot(
         print(f"[MCMC_PLOTS] File exists: {os.path.exists(plot_path)}", flush=True)
         
         if not os.path.exists(plot_path):
-            # List what files are in the directory
             if os.path.exists(plot_dir):
                 files_in_dir = os.listdir(plot_dir)
                 print(f"[MCMC_PLOTS] Files in {plot_dir}: {files_in_dir}", flush=True)

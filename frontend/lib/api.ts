@@ -10,7 +10,6 @@ export const createApiClient = (): AxiosInstance => {
     },
   })
 
-  // Request interceptor: Add auth token
   client.interceptors.request.use(
     (config) => {
       const token = authService.getToken()
@@ -23,7 +22,6 @@ export const createApiClient = (): AxiosInstance => {
     (error) => Promise.reject(error)
   )
 
-  // Response interceptor: Handle errors
   client.interceptors.response.use(
     (response) => {
       console.log('✅ API Success:', response.status, response.config.url)
@@ -32,7 +30,6 @@ export const createApiClient = (): AxiosInstance => {
     (error: AxiosError) => {
       console.error('❌ API Error:', error.response?.status, error.response?.data)
       
-      // Handle 401 - Unauthorized
       if (error.response?.status === 401) {
         authService.clearToken()
         if (typeof window !== 'undefined') {

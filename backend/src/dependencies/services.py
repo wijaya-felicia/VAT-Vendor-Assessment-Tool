@@ -34,5 +34,4 @@ def get_storage_manager_cached() -> StorageManager:
 
 
 def get_auth_service() -> AuthService:
-    """Get auth service instance."""
     return AuthService()

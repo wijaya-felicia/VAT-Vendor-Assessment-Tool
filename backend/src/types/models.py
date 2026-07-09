@@ -1,17 +1,8 @@
-"""
-Pydantic models for API request/response schemas and data structures.
-"""
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-
-# ============================================================================
-# Upload & Session Models
-# ============================================================================
-
 class UploadResponse(BaseModel):
-    """Response after uploading PO, OC, and Ship datasets."""
     session_id: str = Field(..., description="Unique session identifier")
     status: int = Field(200, description="HTTP status code")
     message: str = Field("Upload successful", description="Status message")
@@ -33,18 +24,11 @@ class UploadResponse(BaseModel):
 
 
 class UploadErrorResponse(BaseModel):
-    """Error response for upload failures."""
     status: int = Field(400, description="HTTP status code")
     error: str = Field(..., description="Error message")
     details: Optional[str] = Field(None, description="Additional error details")
 
-
-# ============================================================================
-# Dashboard Models
-# ============================================================================
-
 class VendorStats(BaseModel):
-    """Statistics for a single vendor."""
     vendor_name: str
     transaction_count: int
     total_spending: float = Field(..., description="Sum of all PO total_price")
@@ -56,7 +40,6 @@ class VendorStats(BaseModel):
 
 
 class DashboardMetrics(BaseModel):
-    """Aggregated dashboard metrics."""
     session_id: str
     total_transactions: int
     total_spending: float
@@ -86,7 +69,6 @@ class DashboardMetrics(BaseModel):
 
 
 class TrendDataPoint(BaseModel):
-    """Single data point for trend visualization."""
     date: str
     vendor_name: str
     value: float
@@ -94,18 +76,11 @@ class TrendDataPoint(BaseModel):
 
 
 class VisualizationData(BaseModel):
-    """Data structure for frontend visualization."""
     data_points: List[TrendDataPoint]
     metric_name: str
     unit: str = Field(..., description="e.g., 'USD', 'days', 'amount'")
 
-
-# ============================================================================
-# BHM Models
-# ============================================================================
-
 class VendorBHMScore(BaseModel):
-    """BHM-derived vendor performance score."""
     vendor_name: str
     vendor_id: Optional[str] = None
     price_accuracy_score: float = Field(..., description="Posterior mean of price accuracy")
@@ -120,7 +95,6 @@ class VendorBHMScore(BaseModel):
 
 
 class BHMRankingsResponse(BaseModel):
-    """Response with vendor rankings from BHM."""
     session_id: str
     model_type: str = Field("Bayesian Hierarchical Model", description="Type of model used")
     convergence_status: str = Field(..., description="'converged' or 'not_converged'")
@@ -133,7 +107,6 @@ class BHMRankingsResponse(BaseModel):
 
 
 class BHMDiagnostics(BaseModel):
-    """MCMC convergence diagnostics."""
     metric_name: str
     r_hat: float = Field(..., description="Gelman-Rubin convergence statistic (should be < 1.01)")
     effective_sample_size: int
@@ -142,54 +115,42 @@ class BHMDiagnostics(BaseModel):
 
 
 class BHMVendorDetailResponse(BaseModel):
-    """Detailed BHM results for a single vendor."""
     session_id: str
     vendor_name: str
     vendor_id: Optional[str] = None
     combined_rank_score: float
     rank: int
     
-    # Price accuracy metrics
     price_accuracy_mean: float
     price_accuracy_ci_lower: float
     price_accuracy_ci_upper: float
     price_accuracy_posterior_samples: Optional[List[float]] = Field(None, description="MCMC samples for posterior")
     
-    # Timeliness metrics
     timeliness_mean: float
     timeliness_ci_lower: float
     timeliness_ci_upper: float
     timeliness_posterior_samples: Optional[List[float]] = Field(None, description="MCMC samples for posterior")
     
-    # Diagnostics
     diagnostics: List[BHMDiagnostics]
     transaction_count: int
     confidence: str = Field(..., description="'high' if enough data, 'low' if sparse")
 
 
 class ModelLockRequest(BaseModel):
-    """Request to lock current model posteriors as prior for next year."""
     model_year: str = Field(..., description="e.g., '2025' or '2026'")
     description: Optional[str] = Field(None, description="Optional audit notes")
 
 
 class ModelLockResponse(BaseModel):
-    """Response after locking model."""
     status: str = Field("locked", description="Status of lock operation")
     model_year: str
     locked_at: datetime
     vendor_count: int
     summary: str
 
-
-# ============================================================================
-# Session & Storage Models
-# ============================================================================
-
 class SessionData(BaseModel):
-    """Structure for storing session or persistent data."""
     session_id: str
-    po_data: Optional[Dict[str, Any]] = None  # Simplified representation
+    po_data: Optional[Dict[str, Any]] = None
     oc_data: Optional[Dict[str, Any]] = None
     ship_data: Optional[Dict[str, Any]] = None
     merged_data_row_count: int
@@ -200,7 +161,6 @@ class SessionData(BaseModel):
 
 
 class UploadHistory(BaseModel):
-    """Record of past uploads (for persistent mode)."""
     session_id: str
     uploaded_at: datetime
     row_count: int
@@ -208,13 +168,7 @@ class UploadHistory(BaseModel):
     status: str = Field("completed", description="'completed', 'processing', 'error'")
     summary: Optional[str] = None
 
-
-# ============================================================================
-# Authentication Models
-# ============================================================================
-
 class UserRegister(BaseModel):
-    """User registration request."""
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="Password (min 8 characters)")
     full_name: Optional[str] = Field(None, description="User's full name")
@@ -230,7 +184,6 @@ class UserRegister(BaseModel):
 
 
 class UserLogin(BaseModel):
-    """User login request."""
     email: str = Field(..., description="User email address")
     password: str = Field(..., description="User password")
     
@@ -244,7 +197,6 @@ class UserLogin(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """JWT token response after login/register."""
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field("bearer", description="Token type")
     user_id: int = Field(..., description="User ID")
@@ -264,7 +216,6 @@ class TokenResponse(BaseModel):
 
 
 class UserProfile(BaseModel):
-    """User profile information."""
     user_id: int = Field(..., description="User ID")
     email: str = Field(..., description="User email")
     full_name: Optional[str] = Field(None, description="User's full name")
@@ -276,7 +227,6 @@ class UserProfile(BaseModel):
 
 
 class AuthErrorResponse(BaseModel):
-    """Error response for auth failures."""
     detail: str = Field(..., description="Error message")
     
     class Config:

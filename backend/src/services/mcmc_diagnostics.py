@@ -1,35 +1,18 @@
-"""
-MCMC Diagnostics and Visualization for Bayesian Hierarchical Model.
-Captures burn-in, convergence iterations, and trace plots.
-"""
-
 from typing import Dict, List, Tuple, Any, Optional
 import numpy as np
 import pandas as pd
 from datetime import datetime
 import warnings
 
-# Set non-interactive backend BEFORE any matplotlib import
-# Required for plot generation in server (headless) environments
 import matplotlib
 matplotlib.use('Agg')
 
 
 
 class MCMCDiagnostics:
-    """Extract and visualize MCMC sampling diagnostics."""
     
     def __init__(self, idata, metric_type: str, warmup_draws: int, draws: int, chains: int):
-        """
-        Initialize diagnostics from ArviZ InferenceData.
-        
-        Args:
-            idata: ArviZ InferenceData object
-            metric_type: 'price' or 'timeliness'
-            warmup_draws: Number of warmup iterations per chain
-            draws: Number of post-warmup draws per chain
-            chains: Number of MCMC chains
-        """
+
         self.idata = idata
         self.metric_type = metric_type
         self.warmup_draws = warmup_draws
@@ -37,7 +20,6 @@ class MCMCDiagnostics:
         self.chains = chains
         
     def get_iteration_counts(self) -> Dict[str, int]:
-        """Get detailed iteration count breakdown."""
         total_burn_in = self.warmup_draws * self.chains
         total_convergence = self.draws * self.chains
         total_iterations = total_burn_in + total_convergence
@@ -54,9 +36,6 @@ class MCMCDiagnostics:
         }
     
     def get_prior_likelihood_posterior_info(self) -> Dict[str, Any]:
-        """
-        Extract information about prior, likelihood, and posterior components.
-        """
         try:
             import arviz as az
         except ImportError:
@@ -78,7 +57,6 @@ class MCMCDiagnostics:
         }
         
         try:
-            # Get parameter counts - count all dimensions across all variables
             n_params = 0
             if hasattr(self.idata, 'posterior') and self.idata.posterior is not None:
                 try:
@@ -91,7 +69,6 @@ class MCMCDiagnostics:
                     n_params = 0
             info["n_parameters"] = n_params
             
-            # Rhat values (convergence)
             rhat_data = az.rhat(self.idata)
             rhat_values = []
             max_rhat_found = None
@@ -116,16 +93,13 @@ class MCMCDiagnostics:
             
             info["rhat_diagnostics"] = rhat_values
             
-            # Set max_rhat and convergence status
             if max_rhat_found is not None:
                 info["max_rhat"] = max_rhat_found
                 info["all_converged"] = all(r["converged"] for r in rhat_values) if rhat_values else False
             else:
-                # No Rhat values computed - data might be incomplete
                 info["max_rhat"] = 1.0
                 info["all_converged"] = False
             
-            # ESS (Effective Sample Size)
             ess_data = az.ess(self.idata)
             ess_dict = {}
             if ess_data is not None:
@@ -134,7 +108,6 @@ class MCMCDiagnostics:
                         ess_dict[var_name] = float(var_data.max().values)
             info["effective_sample_size"] = ess_dict
             
-            # Divergences
             try:
                 if hasattr(self.idata, 'sample_stats') and self.idata.sample_stats is not None:
                     if hasattr(self.idata.sample_stats, 'diverging'):
@@ -152,7 +125,6 @@ class MCMCDiagnostics:
                 info["n_divergences"] = 0
                 info["divergence_rate"] = 0.0
             
-            # Log probability (unnormalized posterior)
             try:
                 if hasattr(self.idata, 'sample_stats') and self.idata.sample_stats is not None:
                     if hasattr(self.idata.sample_stats, 'lp'):
@@ -176,7 +148,6 @@ class MCMCDiagnostics:
             print(f"Error in get_prior_likelihood_posterior_info: {e}")
             import traceback
             traceback.print_exc()
-            # Return minimal safe info dict
             return {
                 "metric_type": self.metric_type,
                 "n_parameters": 0,
@@ -190,16 +161,6 @@ class MCMCDiagnostics:
             }
     
     def create_trace_plot(self, output_path: str, max_vars: int = 10) -> bool:
-        """
-        Create trace plots showing burn-in phase.
-        
-        Args:
-            output_path: Path to save plot
-            max_vars: Max number of variables to plot
-        
-        Returns:
-            True if successful
-        """
         try:
             import matplotlib.pyplot as plt
             import arviz as az
@@ -210,7 +171,6 @@ class MCMCDiagnostics:
         try:
             print(f"[TRACE_PLOT] Starting trace plot generation for {self.metric_type}", flush=True)
             
-            # Debug: Check if idata and posterior exist
             if not hasattr(self.idata, 'posterior'):
                 print(f"[TRACE_PLOT] ERROR: idata has no posterior attribute", flush=True)
                 return False
@@ -219,7 +179,6 @@ class MCMCDiagnostics:
                 print(f"[TRACE_PLOT] ERROR: posterior is None", flush=True)
                 return False
             
-            # Select subset of variables for clarity
             var_names = list(self.idata.posterior.data_vars.keys())[:max_vars]
             print(f"[TRACE_PLOT] Found {len(var_names)} variables: {var_names}", flush=True)
             
@@ -241,19 +200,16 @@ class MCMCDiagnostics:
                 ax.set_facecolor('#1a1d23')
                 ax.tick_params(colors='#c8d6e5', which='both')
                 
-                # Get trace data
                 trace_data = self.idata.posterior[var_name].values
                 if len(trace_data.shape) > 2:
                     trace_data = trace_data.reshape(trace_data.shape[0], trace_data.shape[1], -1)
-                    trace_data = trace_data[:, :, 0]  # Use first element
+                    trace_data = trace_data[:, :, 0]
                 
-                # Plot each chain
                 colors = plt.cm.tab10(np.linspace(0, 1, self.chains))
                 for chain_idx in range(self.chains):
                     ax.plot(trace_data[chain_idx], alpha=0.7, color=colors[chain_idx], 
                            linewidth=0.8, label=f'Chain {chain_idx}')
                 
-                # Highlight burn-in region
                 ax.axvline(self.warmup_draws, color='red', linestyle='--', linewidth=2, 
                           label=f'Burn-in end ({self.warmup_draws} draws)')
                 ax.fill_betweenx(
@@ -283,7 +239,6 @@ class MCMCDiagnostics:
             return False
     
     def create_iteration_summary_plot(self, output_path: str) -> bool:
-        """Create comprehensive iteration summary visualization."""
         try:
             import matplotlib.pyplot as plt
         except ImportError:
@@ -304,7 +259,6 @@ class MCMCDiagnostics:
                 for ax in row:
                     ax.set_facecolor('#1a1d23')
             
-            # 1. Iteration breakdown pie chart
             ax = axes[0, 0]
             sizes = [counts["burn_in_iterations"], counts["convergence_iterations"]]
             labels = [
@@ -316,7 +270,6 @@ class MCMCDiagnostics:
                                                startangle=90, textprops={'fontsize': 11, 'color': '#e0e0e0'})
             ax.set_title('Iteration Allocation', fontweight='bold', color='#e0e0e0')
             
-            # 2. Iteration counts bar chart
             ax = axes[0, 1]
             categories = ['Total\nIterations', 'Burn-in\nper Chain', 'Convergence\nper Chain']
             values = [counts["total_iterations"], counts["warmup_per_chain"], counts["draws_per_chain"]]
@@ -327,14 +280,12 @@ class MCMCDiagnostics:
             ax.tick_params(axis='x', colors='#c8d6e5')
             ax.tick_params(axis='y', colors='#c8d6e5')
             
-            # Add value labels on bars
             for bar, val in zip(bars, values):
                 height = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width()/2., height,
                        f'{int(val):,}', ha='center', va='bottom', fontsize=10, fontweight='bold',
                        color='#e0e0e0')
             
-            # 3. Convergence diagnostics
             ax = axes[1, 0]
             ax.set_facecolor('#1a1d23')
             ax.axis('off')
@@ -360,7 +311,6 @@ Effective Sample Size:
                    fontsize=10, verticalalignment='top', family='monospace', color='white',
                    bbox=dict(boxstyle='round', facecolor='#1a1d23', edgecolor='#3d424a', alpha=0.95))
             
-            # 4. Chain information
             ax = axes[1, 1]
             ax.set_facecolor('#1a1d23')
             ax.axis('off')
@@ -400,9 +350,6 @@ Per-Chain Samples:
             return False
     
     def create_burn_in_analysis_plot(self, output_path: str, top_vars: int = 8) -> bool:
-        """
-        Create detailed burn-in analysis plot showing stabilization.
-        """
         try:
             import matplotlib.pyplot as plt
             import arviz as az
@@ -430,7 +377,6 @@ Per-Chain Samples:
                     trace_data = trace_data.reshape(trace_data.shape[0], trace_data.shape[1], -1)
                     trace_data = trace_data[:, :, 0]
                 
-                # Left: Full trace with burn-in marked
                 ax = axes[idx, 0]
                 ax.set_facecolor('#1a1d23')
                 ax.tick_params(colors='#c8d6e5', which='both')
@@ -448,7 +394,6 @@ Per-Chain Samples:
                     ax.legend(fontsize=9, labelcolor='#e0e0e0',
                          facecolor='#1a1d23', edgecolor='#3d424a')
                 
-                # Right: Zoomed on burn-in region
                 ax = axes[idx, 1]
                 ax.set_facecolor('#1a1d23')
                 ax.tick_params(colors='#c8d6e5', which='both')

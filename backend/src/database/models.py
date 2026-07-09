@@ -1,6 +1,3 @@
-"""
-SQLAlchemy ORM models for database tables.
-"""
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime

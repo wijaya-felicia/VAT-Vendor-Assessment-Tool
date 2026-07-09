@@ -1,19 +1,11 @@
-"""
-Script to unlock all locked model priors in the database.
-Handles both old and new database schemas.
-Run this from the backend directory: python unlock_priors.py
-"""
-
 from sqlalchemy import text
 from src.database.connection import SessionLocal, engine
 
 
 def unlock_all_priors():
-    """Unlock all locked model checkpoints."""
     db = SessionLocal()
     
     try:
-        # Use raw SQL to avoid schema conflicts during migration
         result = db.execute(text(
             "UPDATE model_checkpoints SET is_locked = 0 WHERE is_locked = 1"
         ))
@@ -32,7 +24,6 @@ def unlock_all_priors():
         print("\nTrying to add missing columns to schema...")
         try:
             migrate_schema(db)
-            # Retry the unlock
             result = db.execute(text(
                 "UPDATE model_checkpoints SET is_locked = 0 WHERE is_locked = 1"
             ))
@@ -51,7 +42,6 @@ def unlock_all_priors():
 
 
 def migrate_schema(db):
-    """Add missing columns if they don't exist."""
     inspector_sql = "PRAGMA table_info(model_checkpoints)"
     columns = db.execute(text(inspector_sql)).fetchall()
     column_names = [col[1] for col in columns]

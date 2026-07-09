@@ -16,7 +16,6 @@ async def get_dashboard_metrics(
 ):
 
     try:
-        # Retrieve merged data from storage
         df = storage_manager.retrieve_data(session_id)
 
         if df is None:

@@ -52,7 +52,6 @@ async def upload_files(
             metrics={},
         )
 
-        # Save upload record to database (with user_id if authenticated)
         upload_record = UploadRecord(
             session_id=session_id,
             user_id=current_user.id if current_user else None,

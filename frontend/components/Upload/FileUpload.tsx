@@ -54,7 +54,6 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
             formData.append("oc", files.oc);
             formData.append("ship", files.ship);
 
-            // Simulate progress
             const progressInterval = setInterval(() => {
                 setUploadProgress((prev) => {
                     if (prev >= 90) {
@@ -76,7 +75,6 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
             clearInterval(progressInterval);
             setUploadProgress(100);
 
-            // Reset form
             setFiles({});
             if (poInputRef.current) poInputRef.current.value = "";
             if (ocInputRef.current) ocInputRef.current.value = "";
@@ -89,10 +87,8 @@ export default function FileUpload({ onSuccess, onError }: FileUploadProps) {
         } catch (err: any) {
             let errorMessage = "Upload failed";
 
-            // Extract error message from various response formats
             if (err.response?.data?.detail) {
                 const detail = err.response.data.detail;
-                // Handle array of validation errors
                 if (Array.isArray(detail)) {
                     errorMessage = detail
                         .map((e: any) =>

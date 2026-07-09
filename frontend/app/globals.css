@@ -35,7 +35,6 @@ body {
   color: #ffffff;
 }
 
-/* ============ NAVBAR ============ */
 .navbar {
   background: linear-gradient(90deg, #0d47a1 0%, #1565c0 100%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -80,7 +79,6 @@ body {
   width: 100%;
 }
 
-/* ============ CARDS ============ */
 .card {
   background: linear-gradient(135deg, #1a1d23 0%, #242830 100%);
   border: 1px solid #2d3139;
@@ -107,7 +105,6 @@ body {
   color: #ffffff;
 }
 
-/* ============ METRIC CARDS ============ */
 .metric-card {
   background: linear-gradient(135deg, #1a2f4d 0%, #0f1f34 100%);
   border-left: 5px solid var(--accent-blue);
@@ -136,7 +133,6 @@ body {
   letter-spacing: 1px;
 }
 
-/* ============ BUTTONS ============ */
 .btn {
   font-weight: 600;
   border-radius: 6px;
@@ -182,7 +178,6 @@ body {
   cursor: not-allowed;
 }
 
-/* ============ FORMS ============ */
 .form-control {
   background-color: #2d3139;
   border: 1px solid #3d424a;
@@ -219,8 +214,6 @@ body {
   color: #ffffff !important;
 }
 
-/* Force white text on card headings only */
-/* Note: no !important here so .text-muted can override in cards */
 .card h6,
 .card h5,
 .card h4,
@@ -228,7 +221,6 @@ body {
   color: #ffffff;
 }
 
-/* Fix text-muted contrast on dark backgrounds */
 .text-muted {
   color: #9ca3af !important;
 }
@@ -237,9 +229,6 @@ body {
   font-weight: 600;
 }
 
-
-
-/* Form select on dark background */
 .form-select {
   background-color: #2d3139;
   border: 1px solid #3d424a;
@@ -254,7 +243,6 @@ body {
   box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
 }
 
-/* Nav tabs on dark background */
 .nav-tabs {
   border-bottom-color: #3d424a;
 }
@@ -269,7 +257,6 @@ body {
   border-color: var(--accent-cyan) var(--accent-cyan) #2d3139;
 }
 
-/* ============ TABLES ============ */
 .table {
   color: #ffffff;
 }
@@ -302,7 +289,6 @@ body {
   background-color: rgba(30, 40, 50, 0.6);
 }
 
-/* ============ BADGES & ALERTS ============ */
 .badge {
   padding: 0.5rem 0.75rem;
   font-weight: 600;
@@ -365,7 +351,6 @@ body {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
 }
 
-/* ============ MODAL ============ */
 .modal-content {
   background: linear-gradient(135deg, #1a1d23 0%, #242830 100%);
   border: 1px solid #2d3139;
@@ -380,7 +365,6 @@ body {
   filter: invert(1);
 }
 
-/* ============ CHART CONTAINERS ============ */
 .chart-container {
   background: linear-gradient(135deg, #1a1d23 0%, #242830 100%);
   border: 1px solid #2d3139;
@@ -389,7 +373,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ============ BADGES FOR RANKS ============ */
 .rank-badge {
   display: inline-flex;
   align-items: center;
@@ -418,7 +401,6 @@ body {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
 }
 
-/* ============ LOADING ============ */
 .spinner-border {
   color: var(--accent-cyan);
 }
@@ -427,7 +409,6 @@ body {
   color: var(--accent-cyan);
 }
 
-/* ============ LINKS ============ */
 a {
   color: #4db8ff;
   text-decoration: none;
@@ -440,7 +421,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ============ MAIN CONTAINER ============ */
 main {
   padding-top: 2rem;
   padding-bottom: 2rem;
@@ -456,7 +436,6 @@ main {
   text-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
 }
 
-/* ============ SCROLLBAR ============ */
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -474,7 +453,6 @@ main {
   background: linear-gradient(180deg, #1565c0 0%, #1976d2 100%);
 }
 
-/* ============ FOOTER ============ */
 .footer {
   background: linear-gradient(90deg, #0d47a1 0%, #1565c0 100%);
   border-top: 2px solid var(--accent-cyan);
@@ -492,7 +470,6 @@ main {
   color: #ffffff;
 }
 
-/* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
   .navbar-brand {
     font-size: 1.2rem;

@@ -23,7 +23,6 @@ export default function PublicUploadPage() {
         );
         setError("");
 
-        // Auto-scroll to metrics
         setTimeout(() => {
             document
                 .getElementById("metrics-section")

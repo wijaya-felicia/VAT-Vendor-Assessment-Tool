@@ -36,14 +36,12 @@ export default function RankingsPage() {
         checkAuth();
     }, [checkAuth]);
 
-    // Get session ID from URL params or fetch latest for logged-in users
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const urlSessionId = params.get("session_id");
         if (urlSessionId) {
             setSessionId(urlSessionId);
         } else if (user && !sessionId) {
-            // Auto-fetch latest session for logged-in users
             setFetchingSession(true);
             api.get("/bhm/latest-session")
                 .then((res) => {
@@ -68,7 +66,6 @@ export default function RankingsPage() {
         );
     }
 
-    // Allow public access if session_id is provided, or authenticated users
     if (!sessionId && !user) {
         return (
             <Container

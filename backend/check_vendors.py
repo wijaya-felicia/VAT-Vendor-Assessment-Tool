@@ -27,7 +27,6 @@ print("\n" + "=" * 80)
 print("CHECKING FOR PATTERN OF VENDOR APPEARANCE:")
 print("=" * 80)
 
-# Check how many unique po_numbers per vendor
 print("\nVendor distribution by PO:")
 po_vendor = df_po[['po_number', 'vendor_name']].dropna()
 for vendor in df_po['vendor_name'].dropna().unique():
